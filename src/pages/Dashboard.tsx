@@ -4,27 +4,28 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from "@/components/AuthProvider";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 import { 
   LogOut, 
   User, 
-  Shield, 
-  Star, 
   LayoutDashboard, 
+  FileText, 
+  BarChart3,
   Calendar, 
   MessageSquare, 
   Settings,
   Bell,
-  Menu,
-  X
+  Menu
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import BulletinOfficiel from "@/components/dashboard/BulletinOfficiel";
+import CivilizationIndices from "@/components/dashboard/CivilizationIndices";
 
 const Dashboard = () => {
   const { user, signOut, loading } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<{ role: string; full_name: string } | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("overview");
 
   useEffect(() => {
     if (!loading && !user) {
@@ -57,15 +58,43 @@ const Dashboard = () => {
   if (!user) return null;
 
   const navItems = [
-    { icon: LayoutDashboard, label: "Vue d'ensemble", active: true },
-    { icon: Calendar, label: "Programme", active: false },
-    { icon: MessageSquare, label: "Messagerie", active: false },
-    { icon: Settings, label: "Paramètres", active: false },
+    { id: "overview", icon: LayoutDashboard, label: "Vue d'ensemble" },
+    { id: "bulletin", icon: FileText, label: "Bulletin officiel" },
+    { id: "indices", icon: BarChart3, label: "Indices de civilisation" },
+    { id: "programme", icon: Calendar, label: "Programme" },
+    { id: "messages", icon: MessageSquare, label: "Messagerie" },
+    { id: "settings", icon: Settings, label: "Paramètres" },
   ];
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case "bulletin":
+        return <BulletinOfficiel />;
+      case "indices":
+        return <CivilizationIndices />;
+      case "overview":
+      default:
+        return (
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="mb-10">
+              <h1 className="text-3xl font-bold tracking-tight mb-2">Tableau de bord</h1>
+              <p className="text-muted-foreground">Bienvenue dans votre espace AfterWorld personnalisé.</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-40 rounded-2xl border border-white/5 bg-white/[0.02] animate-pulse" />
+              ))}
+            </div>
+            <div className="h-96 rounded-2xl border border-white/5 bg-white/[0.02] flex items-center justify-center text-muted-foreground italic">
+              Espace prêt pour vos nouveaux modules...
+            </div>
+          </div>
+        );
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#050505] text-white flex overflow-hidden">
-      {/* Sidebar Mobile Overlay */}
       {isSidebarOpen && (
         <div 
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
@@ -73,7 +102,6 @@ const Dashboard = () => {
         />
       )}
 
-      {/* Sidebar */}
       <aside className={cn(
         "fixed inset-y-0 left-0 z-50 w-72 bg-[#0A0A0A] border-r border-white/5 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0",
         isSidebarOpen ? "translate-x-0" : "-translate-x-full"
@@ -89,10 +117,14 @@ const Dashboard = () => {
           <nav className="flex-1 space-y-2">
             {navItems.map((item) => (
               <button
-                key={item.label}
+                key={item.id}
+                onClick={() => {
+                  setActiveTab(item.id);
+                  setIsSidebarOpen(false);
+                }}
                 className={cn(
                   "w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 group",
-                  item.active 
+                  activeTab === item.id 
                     ? "bg-primary/10 text-primary" 
                     : "text-muted-foreground hover:bg-white/5 hover:text-white"
                 )}
@@ -115,9 +147,7 @@ const Dashboard = () => {
         </div>
       </aside>
 
-      {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Header */}
         <header className="h-20 border-b border-white/5 flex items-center justify-between px-6 lg:px-10 bg-[#050505]/50 backdrop-blur-xl sticky top-0 z-30">
           <button 
             className="lg:hidden p-2 hover:bg-white/5 rounded-lg"
@@ -146,24 +176,9 @@ const Dashboard = () => {
           </div>
         </header>
 
-        {/* Content Area */}
         <div className="flex-1 overflow-y-auto p-6 lg:p-10">
           <div className="max-w-5xl mx-auto">
-            <div className="mb-10">
-              <h1 className="text-3xl font-bold tracking-tight mb-2">Tableau de bord</h1>
-              <p className="text-muted-foreground">Bienvenue dans votre espace AfterWorld personnalisé.</p>
-            </div>
-
-            {/* Placeholders pour le futur contenu */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-40 rounded-2xl border border-white/5 bg-white/[0.02] animate-pulse" />
-              ))}
-            </div>
-            
-            <div className="mt-8 h-96 rounded-2xl border border-white/5 bg-white/[0.02] flex items-center justify-center text-muted-foreground italic">
-              Espace prêt pour vos nouveaux modules...
-            </div>
+            {renderContent()}
           </div>
         </div>
       </main>
