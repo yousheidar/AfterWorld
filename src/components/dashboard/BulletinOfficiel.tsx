@@ -5,7 +5,23 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, ChevronRight, FileText, Loader2, User, Building2 } from "lucide-react";
+import { 
+  Calendar, 
+  ChevronRight, 
+  FileText, 
+  Loader2, 
+  User, 
+  Building2, 
+  Clock,
+  X
+} from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import PublicationForm from "./PublicationForm";
 
 const BulletinOfficiel = () => {
@@ -13,11 +29,11 @@ const BulletinOfficiel = () => {
   const [publications, setPublications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [selectedPub, setSelectedPub] = useState<any | null>(null);
 
   const fetchPublications = async () => {
     setLoading(true);
     try {
-      // On tente de récupérer avec la jointure profil
       const { data, error } = await supabase
         .from('publications')
         .select(`
@@ -27,8 +43,6 @@ const BulletinOfficiel = () => {
         .order('created_at', { ascending: false });
       
       if (error) {
-        console.error("Erreur fetch:", error);
-        // Repli si la jointure échoue
         const { data: simpleData } = await supabase
           .from('publications')
           .select('*')
@@ -70,6 +84,14 @@ const BulletinOfficiel = () => {
     }
   };
 
+  const formatDateTime = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return {
+      date: date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+      time: date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+    };
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center justify-between">
@@ -93,42 +115,87 @@ const BulletinOfficiel = () => {
         </Card>
       ) : (
         <div className="grid gap-4">
-          {publications.map((pub) => (
-            <Card key={pub.id} className="bg-white/[0.02] border-white/5 hover:bg-white/[0.04] transition-colors cursor-pointer group">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex gap-2">
-                    <Badge className={getCategoryStyle(pub.category)}>
-                      {pub.category}
-                    </Badge>
-                    {pub.provenance && (
-                      <Badge variant="outline" className="border-white/10 text-muted-foreground">
-                        <Building2 size={10} className="mr-1" /> {pub.provenance}
+          {publications.map((pub) => {
+            const { date, time } = formatDateTime(pub.created_at);
+            return (
+              <Card 
+                key={pub.id} 
+                className="bg-white/[0.02] border-white/5 hover:bg-white/[0.04] transition-colors cursor-pointer group"
+                onClick={() => setSelectedPub(pub)}
+              >
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex gap-2">
+                      <Badge className={getCategoryStyle(pub.category)}>
+                        {pub.category}
                       </Badge>
-                    )}
+                      {pub.provenance && (
+                        <Badge variant="outline" className="border-white/10 text-muted-foreground">
+                          <Building2 size={10} className="mr-1" /> {pub.provenance}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center space-x-3 text-xs text-muted-foreground">
+                      <span className="flex items-center"><Calendar size={12} className="mr-1" /> {date}</span>
+                      <span className="flex items-center"><Clock size={12} className="mr-1" /> {time}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center text-xs text-muted-foreground">
-                    <Calendar size={12} className="mr-1" />
-                    {new Date(pub.created_at).toLocaleDateString('fr-FR')}
+                  <CardTitle className="text-lg group-hover:text-primary transition-colors flex items-center justify-between">
+                    {pub.title}
+                    <ChevronRight size={18} className="text-muted-foreground group-hover:translate-x-1 transition-transform" />
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground line-clamp-2 mb-4 whitespace-pre-wrap">
+                    {pub.excerpt || pub.content}
+                  </p>
+                  <div className="flex items-center text-[10px] uppercase tracking-widest text-muted-foreground/60 font-medium">
+                    <User size={10} className="mr-1" /> Émis par : {pub.profiles?.full_name || "Utilisateur AfterWorld"}
                   </div>
-                </div>
-                <CardTitle className="text-lg group-hover:text-primary transition-colors flex items-center justify-between">
-                  {pub.title}
-                  <ChevronRight size={18} className="text-muted-foreground group-hover:translate-x-1 transition-transform" />
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground line-clamp-2 mb-4 whitespace-pre-wrap">
-                  {pub.excerpt || pub.content}
-                </p>
-                <div className="flex items-center text-[10px] uppercase tracking-widest text-muted-foreground/60 font-medium">
-                  <User size={10} className="mr-1" /> Émis par : {pub.profiles?.full_name || "Utilisateur AfterWorld"}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
+
+      {/* Modal de lecture complète */}
+      <Dialog open={!!selectedPub} onOpenChange={(open) => !open && setSelectedPub(null)}>
+        <DialogContent className="sm:max-w-[700px] bg-[#0A0A0A] border-white/10 text-white max-h-[90vh] overflow-y-auto">
+          {selectedPub && (
+            <>
+              <DialogHeader className="space-y-4">
+                <div className="flex flex-wrap gap-2">
+                  <Badge className={getCategoryStyle(selectedPub.category)}>
+                    {selectedPub.category}
+                  </Badge>
+                  {selectedPub.provenance && (
+                    <Badge variant="outline" className="border-white/10 text-muted-foreground">
+                      <Building2 size={12} className="mr-1" /> {selectedPub.provenance}
+                    </Badge>
+                  )}
+                </div>
+                <DialogTitle className="text-3xl font-bold leading-tight text-primary">
+                  {selectedPub.title}
+                </DialogTitle>
+                <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground border-b border-white/5 pb-4">
+                  <div className="flex items-center"><Calendar size={14} className="mr-2" /> {formatDateTime(selectedPub.created_at).date}</div>
+                  <div className="flex items-center"><Clock size={14} className="mr-2" /> {formatDateTime(selectedPub.created_at).time}</div>
+                  <div className="flex items-center"><User size={14} className="mr-2" /> {selectedPub.profiles?.full_name || "Utilisateur AfterWorld"}</div>
+                </div>
+              </DialogHeader>
+              <div className="mt-6 text-lg leading-relaxed text-gray-300 whitespace-pre-wrap font-light">
+                {selectedPub.content}
+              </div>
+              <div className="mt-12 pt-6 border-t border-white/5 flex justify-end">
+                <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/40">
+                  Document Officiel AfterWorld Conference — ID: {selectedPub.id.substring(0, 8)}
+                </p>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
