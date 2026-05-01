@@ -6,12 +6,14 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LogOut, User, Shield, Star, LayoutDashboard } from "lucide-react";
+import { LogOut, User, Shield, Star, LayoutDashboard, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const Dashboard = () => {
   const { user, signOut, loading } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<{ role: string; full_name: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -20,18 +22,38 @@ const Dashboard = () => {
 
     if (user) {
       const fetchProfile = async () => {
-        const { data } = await supabase
-          .from('profiles')
-          .select('role, full_name')
-          .eq('id', user.id)
-          .single();
-        setProfile(data);
+        try {
+          const { data, error: fetchError } = await supabase
+            .from('profiles')
+            .select('role, full_name')
+            .eq('id', user.id)
+            .single();
+          
+          if (fetchError) {
+            console.warn("Profil non trouvé, utilisation des métadonnées d'auth");
+            // Fallback sur les métadonnées de l'utilisateur si le profil n'existe pas encore
+            setProfile({
+              role: user.user_metadata?.role || 'Participant',
+              full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Utilisateur'
+            });
+          } else {
+            setProfile(data);
+          }
+        } catch (err) {
+          setError("Impossible de charger votre profil complet.");
+        }
       };
       fetchProfile();
     }
   }, [user, loading, navigate]);
 
-  if (loading || !user) return null;
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+    </div>
+  );
+  
+  if (!user) return null;
 
   const getRoleIcon = (role: string) => {
     switch (role) {
@@ -43,7 +65,6 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Navigation Bar */}
       <nav className="border-b border-white/10 bg-card/30 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-2">
@@ -66,9 +87,17 @@ const Dashboard = () => {
       </nav>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {error && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Attention</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
         <div className="space-y-8">
           <header>
-            <h1 className="text-3xl font-bold tracking-tight">Bienvenue dans l'AfterWorld</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Bienvenue, {profile?.full_name || 'dans l\'AfterWorld'}</h1>
             <p className="text-muted-foreground mt-2">Voici votre espace personnel pour la conférence.</p>
           </header>
 
@@ -107,7 +136,6 @@ const Dashboard = () => {
             </Card>
           </div>
 
-          {/* Section spécifique au rôle */}
           <div className="mt-12 p-8 rounded-2xl border border-white/10 bg-gradient-to-br from-primary/10 to-transparent">
             <h2 className="text-xl font-semibold mb-4">Actualités de la Conférence</h2>
             <div className="space-y-4">
