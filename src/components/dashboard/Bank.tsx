@@ -7,14 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Coins, Send, History, Loader2, ArrowUpRight, ArrowDownLeft } from "lucide-react";
+import { Coins, Send, Loader2 } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
 
 const Bank = () => {
   const { user } = useAuth();
   const [balance, setBalance] = useState<number>(0);
   const [users, setUsers] = useState<any[]>([]);
-  const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   
@@ -41,14 +40,6 @@ const Bank = () => {
         .select('id, full_name, committee')
         .neq('id', user.id);
       setUsers(allUsers || []);
-
-      // 3. Historique des transactions
-      const { data: txs } = await supabase
-        .from('transactions')
-        .select('*, sender:sender_id(full_name), receiver:receiver_id(full_name)')
-        .order('created_at', { ascending: false })
-        .limit(10);
-      setTransactions(txs || []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -154,54 +145,6 @@ const Bank = () => {
           </CardContent>
         </Card>
       </div>
-
-      {/* History */}
-      <Card className="bg-white/[0.02] border-white/5">
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center">
-            <History className="mr-2 h-5 w-5 text-primary" /> Historique récent
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {transactions.length === 0 ? (
-              <p className="text-center py-8 text-muted-foreground italic">Aucune transaction enregistrée</p>
-            ) : (
-              transactions.map((tx) => {
-                const isOut = tx.sender_id === user?.id;
-                const isSystem = !tx.sender_id;
-                
-                return (
-                  <div key={tx.id} className="flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/5">
-                    <div className="flex items-center space-x-4">
-                      <div className={cn(
-                        "p-2 rounded-lg",
-                        isSystem ? "bg-blue-500/10 text-blue-400" : isOut ? "bg-red-500/10 text-red-400" : "bg-emerald-500/10 text-emerald-400"
-                      )}>
-                        {isSystem ? <Coins size={18} /> : isOut ? <ArrowUpRight size={18} /> : <ArrowDownLeft size={18} />}
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm">
-                          {isSystem ? "Système AfterWorld" : isOut ? `À : ${tx.receiver?.full_name}` : `De : ${tx.sender?.full_name}`}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                          {new Date(tx.created_at).toLocaleString('fr-FR')}
-                        </p>
-                      </div>
-                    </div>
-                    <div className={cn(
-                      "font-bold",
-                      isSystem ? "text-blue-400" : isOut ? "text-red-400" : "text-emerald-400"
-                    )}>
-                      {isOut ? "-" : "+"}{tx.amount}
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };
