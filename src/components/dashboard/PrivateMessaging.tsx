@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 import { Card, CardContent } from "@/components/ui/card";
@@ -22,7 +22,7 @@ const PrivateMessaging = () => {
   const userRole = user?.user_metadata?.role;
   const isAuthorized = userRole === 'Etat-Major' || userRole === 'Présidence';
 
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async () => {
     if (!isAuthorized) return;
     try {
       const { data, error } = await supabase
@@ -46,22 +46,36 @@ const PrivateMessaging = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isAuthorized]);
 
   useEffect(() => {
+    if (!isAuthorized) return;
+
     fetchMessages();
     
+    // Souscription robuste au canal temps réel
     const channel = supabase
-      .channel('private_messages_realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'private_messages' }, () => {
-        fetchMessages();
-      })
-      .subscribe();
+      .channel('room_private_messages')
+      .on(
+        'postgres_changes', 
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'private_messages' 
+        }, 
+        (payload) => {
+          console.log('Changement détecté en direct:', payload);
+          fetchMessages();
+        }
+      )
+      .subscribe((status) => {
+        console.log('Statut de la connexion temps réel:', status);
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [isAuthorized]);
+  }, [isAuthorized, fetchMessages]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -73,16 +87,19 @@ const PrivateMessaging = () => {
     e.preventDefault();
     if (!content.trim() || !user) return;
 
+    const messageContent = content.trim();
+    setContent(""); // On vide l'input immédiatement pour une sensation de fluidité
     setSending(true);
+    
     try {
       const { error } = await supabase
         .from('private_messages')
-        .insert([{ sender_id: user.id, content: content.trim() }]);
+        .insert([{ sender_id: user.id, content: messageContent }]);
 
       if (error) throw error;
-      setContent("");
     } catch (err: any) {
       showError("Erreur d'envoi");
+      setContent(messageContent); // On remet le texte en cas d'erreur
     } finally {
       setSending(false);
     }
