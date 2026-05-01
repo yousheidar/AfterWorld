@@ -7,13 +7,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Coins, Send, Loader2 } from "lucide-react";
+import { Coins, Send, Loader2, Trophy, Medal } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
+import { cn } from "@/lib/utils";
 
 const Bank = () => {
   const { user } = useAuth();
   const [balance, setBalance] = useState<number>(0);
   const [users, setUsers] = useState<any[]>([]);
+  const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   
@@ -34,12 +36,21 @@ const Bank = () => {
         .single();
       setBalance(profile?.balance || 0);
 
-      // 2. Liste des autres utilisateurs
+      // 2. Liste des autres utilisateurs pour le transfert
       const { data: allUsers } = await supabase
         .from('profiles')
         .select('id, full_name, committee')
-        .neq('id', user.id);
+        .neq('id', user.id)
+        .order('full_name', { ascending: true });
       setUsers(allUsers || []);
+
+      // 3. Classement des plus riches
+      const { data: richList } = await supabase
+        .from('profiles')
+        .select('full_name, balance, committee, role')
+        .order('balance', { ascending: false })
+        .limit(10);
+      setLeaderboard(richList || []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -145,6 +156,57 @@ const Bank = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Leaderboard */}
+      <Card className="bg-white/[0.02] border-white/5 overflow-hidden">
+        <CardHeader className="border-b border-white/5 bg-white/[0.01]">
+          <CardTitle className="text-lg flex items-center">
+            <Trophy className="mr-2 h-5 w-5 text-yellow-500" /> Classement des Fortunes
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="divide-y divide-white/5">
+            {leaderboard.map((entry, index) => (
+              <div 
+                key={index} 
+                className={cn(
+                  "flex items-center justify-between p-4 transition-colors hover:bg-white/[0.02]",
+                  entry.full_name === user?.user_metadata?.full_name && "bg-primary/5"
+                )}
+              >
+                <div className="flex items-center space-x-4">
+                  <div className="w-8 flex justify-center">
+                    {index === 0 ? (
+                      <Medal className="text-yellow-500" size={20} />
+                    ) : index === 1 ? (
+                      <Medal className="text-gray-400" size={20} />
+                    ) : index === 2 ? (
+                      <Medal className="text-amber-700" size={20} />
+                    ) : (
+                      <span className="text-muted-foreground font-mono text-sm">{index + 1}</span>
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm flex items-center">
+                      {entry.full_name}
+                      {entry.full_name === user?.user_metadata?.full_name && (
+                        <span className="ml-2 text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded uppercase tracking-tighter">Vous</span>
+                      )}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                      {entry.committee || entry.role}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="font-bold text-primary">{entry.balance}</div>
+                  <div className="text-[10px] text-muted-foreground uppercase">AfterCoins</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
