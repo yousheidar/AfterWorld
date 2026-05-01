@@ -60,7 +60,7 @@ const BulletinOfficiel = () => {
           <h2 className="text-2xl font-bold tracking-tight">Bulletin Officiel</h2>
           <p className="text-sm text-muted-foreground">Archives et décisions de la conférence</p>
         </div>
-        {canPublish && <PublicationForm onSuccess={fetchPublications} />}
+        {canPublish && <PublicationForm onSuccess={fetchPublications} userRole={userRole} />}
       </div>
 
       {loading ? (

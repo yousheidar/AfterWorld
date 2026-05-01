@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 import { Button } from "@/components/ui/button";
@@ -13,17 +13,27 @@ import { showSuccess, showError } from "@/utils/toast";
 
 interface PublicationFormProps {
   onSuccess: () => void;
+  userRole: string | null;
 }
 
-const PublicationForm = ({ onSuccess }: PublicationFormProps) => {
+const PublicationForm = ({ onSuccess, userRole }: PublicationFormProps) => {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
-    category: "Décision",
+    category: "Loi",
     content: ""
   });
+
+  // Ajuster la catégorie par défaut si le rôle change
+  useEffect(() => {
+    if (userRole === 'Présidence') {
+      setFormData(prev => ({ ...prev, category: "Loi" }));
+    } else {
+      setFormData(prev => ({ ...prev, category: "Décision" }));
+    }
+  }, [userRole]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,7 +56,11 @@ const PublicationForm = ({ onSuccess }: PublicationFormProps) => {
       if (error) throw error;
 
       showSuccess("Publication enregistrée avec succès");
-      setFormData({ title: "", category: "Décision", content: "" });
+      setFormData({ 
+        title: "", 
+        category: userRole === 'Présidence' ? "Loi" : "Décision", 
+        content: "" 
+      });
       setOpen(false);
       onSuccess();
     } catch (err: any) {
@@ -55,6 +69,14 @@ const PublicationForm = ({ onSuccess }: PublicationFormProps) => {
       setLoading(false);
     }
   };
+
+  const categories = userRole === 'Présidence' 
+    ? [{ value: "Loi", label: "Loi" }]
+    : [
+        { value: "Loi", label: "Loi" },
+        { value: "Décision", label: "Décision" },
+        { value: "Décret", label: "Décret" }
+      ];
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -84,16 +106,20 @@ const PublicationForm = ({ onSuccess }: PublicationFormProps) => {
             <Select 
               value={formData.category} 
               onValueChange={(v) => setFormData({...formData, category: v})}
+              disabled={userRole === 'Présidence'}
             >
               <SelectTrigger className="bg-background/50 border-white/10">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Loi">Loi</SelectItem>
-                <SelectItem value="Décision">Décision</SelectItem>
-                <SelectItem value="Décret">Décret</SelectItem>
+                {categories.map(cat => (
+                  <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
+            {userRole === 'Présidence' && (
+              <p className="text-[10px] text-muted-foreground italic">Votre rôle est restreint à la publication de Lois.</p>
+            )}
           </div>
 
           <div className="space-y-2">
