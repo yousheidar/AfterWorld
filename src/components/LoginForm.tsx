@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -39,6 +40,7 @@ const formSchema = z.object({
 
 const LoginForm = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -51,16 +53,38 @@ const LoginForm = () => {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      // Note: Dans un flux réel, on utiliserait signInWithPassword.
+      // Pour que le rôle soit enregistré, l'utilisateur doit d'abord être créé (signUp).
+      // Ici, on tente la connexion.
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: values.email,
         password: values.password,
       });
 
       if (error) {
-        showError("Erreur de connexion : " + error.message);
-      } else {
-        showSuccess(`Bienvenue ! Connexion réussie en tant que ${values.accountType}`);
-        // Ici on pourrait rediriger vers un dashboard
+        // Si l'utilisateur n'existe pas, on le crée pour l'exemple (SignUp)
+        if (error.message.includes("Invalid login credentials")) {
+          const { error: signUpError } = await supabase.auth.signUp({
+            email: values.email,
+            password: values.password,
+            options: {
+              data: {
+                role: values.accountType,
+              }
+            }
+          });
+          
+          if (signUpError) {
+            showError("Erreur : " + signUpError.message);
+          } else {
+            showSuccess("Compte créé ! Vérifiez vos emails ou connectez-vous.");
+          }
+        } else {
+          showError("Erreur de connexion : " + error.message);
+        }
+      } else if (data.user) {
+        showSuccess(`Bienvenue ! Connexion réussie.`);
+        navigate("/dashboard");
       }
     } catch (err) {
       showError("Une erreur inattendue est survenue.");
@@ -136,7 +160,7 @@ const LoginForm = () => {
             disabled={isLoading}
             className="w-full bg-primary hover:bg-primary/90 text-white font-medium py-6 rounded-xl transition-all duration-300 shadow-lg shadow-primary/20"
           >
-            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Se connecter"}
+            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Se connecter / S'inscrire"}
           </Button>
         </form>
       </Form>
