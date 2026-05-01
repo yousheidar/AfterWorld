@@ -16,19 +16,32 @@ const BulletinOfficiel = () => {
 
   const fetchPublications = async () => {
     setLoading(true);
-    // On joint les profils pour avoir le nom de l'auteur
-    const { data, error } = await supabase
-      .from('publications')
-      .select(`
-        *,
-        profiles:author_id (full_name)
-      `)
-      .order('created_at', { ascending: false });
-    
-    if (!error && data) {
-      setPublications(data);
+    try {
+      // On récupère d'abord les publications
+      const { data, error } = await supabase
+        .from('publications')
+        .select(`
+          *,
+          author:profiles!publications_author_id_fkey (full_name)
+        `)
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error("Erreur fetch publications:", error);
+        // Tentative de repli sans la jointure si elle échoue
+        const { data: simpleData } = await supabase
+          .from('publications')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (simpleData) setPublications(simpleData);
+      } else if (data) {
+        setPublications(data);
+      }
+    } catch (err) {
+      console.error("Erreur inattendue:", err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -105,11 +118,11 @@ const BulletinOfficiel = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
+                <p className="text-sm text-muted-foreground line-clamp-2 mb-4 whitespace-pre-wrap">
                   {pub.excerpt || pub.content}
                 </p>
                 <div className="flex items-center text-[10px] uppercase tracking-widest text-muted-foreground/60 font-medium">
-                  <User size={10} className="mr-1" /> Émis par : {pub.profiles?.full_name || "Anonyme"}
+                  <User size={10} className="mr-1" /> Émis par : {pub.author?.full_name || pub.profiles?.full_name || "Anonyme"}
                 </div>
               </CardContent>
             </Card>
