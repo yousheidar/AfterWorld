@@ -1,62 +1,107 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/components/AuthProvider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Calendar, ChevronRight } from "lucide-react";
+import { Calendar, ChevronRight, FileText, Loader2 } from "lucide-react";
+import PublicationForm from "./PublicationForm";
 
 const BulletinOfficiel = () => {
-  // Données fictives pour l'instant
-  const publications = [
-    {
-      id: 1,
-      title: "Décret N°2024-01 : Protocole de sécurité AfterWorld",
-      date: "15 Mars 2024",
-      category: "Décision",
-      excerpt: "Mise en place des nouvelles directives concernant l'accès aux zones restreintes du secteur 7..."
-    },
-    {
-      id: 2,
-      title: "Analyse de l'évolution technologique post-effondrement",
-      date: "12 Mars 2024",
-      category: "Article",
-      excerpt: "Une étude approfondie sur la résilience des infrastructures numériques dans les zones de transition."
+  const { user } = useAuth();
+  const [publications, setPublications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  const fetchPublications = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('publications')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (!error && data) {
+      setPublications(data);
     }
-  ];
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchPublications();
+
+    if (user) {
+      const getRole = async () => {
+        const { data } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+        if (data) setUserRole(data.role);
+      };
+      getRole();
+    }
+  }, [user]);
+
+  const canPublish = userRole === 'Etat-Major' || userRole === 'Présidence';
+
+  const getCategoryStyle = (cat: string) => {
+    switch (cat) {
+      case 'Loi': return 'bg-red-500/10 text-red-400 border-red-500/20';
+      case 'Décret': return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+      default: return 'bg-purple-500/10 text-purple-400 border-purple-500/20';
+    }
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold tracking-tight">Bulletin Officiel</h2>
-        <Badge variant="outline" className="border-primary/30 text-primary">Lecture seule</Badge>
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Bulletin Officiel</h2>
+          <p className="text-sm text-muted-foreground">Archives et décisions de la conférence</p>
+        </div>
+        {canPublish && <PublicationForm onSuccess={fetchPublications} />}
       </div>
 
-      <div className="grid gap-4">
-        {publications.map((pub) => (
-          <Card key={pub.id} className="bg-white/[0.02] border-white/5 hover:bg-white/[0.04] transition-colors cursor-pointer group">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between mb-2">
-                <Badge className={pub.category === 'Décision' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-purple-500/10 text-purple-400 border-purple-500/20'}>
-                  {pub.category}
-                </Badge>
-                <div className="flex items-center text-xs text-muted-foreground">
-                  <Calendar size={12} className="mr-1" />
-                  {pub.date}
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+          <Loader2 className="h-8 w-8 animate-spin mb-4 text-primary" />
+          <p>Chargement des archives...</p>
+        </div>
+      ) : publications.length === 0 ? (
+        <Card className="bg-white/[0.02] border-white/5 border-dashed p-12 text-center">
+          <FileText className="mx-auto h-12 w-12 text-muted-foreground/20 mb-4" />
+          <h3 className="text-lg font-medium">Aucune publication</h3>
+          <p className="text-muted-foreground">Le bulletin officiel est actuellement vide.</p>
+        </Card>
+      ) : (
+        <div className="grid gap-4">
+          {publications.map((pub) => (
+            <Card key={pub.id} className="bg-white/[0.02] border-white/5 hover:bg-white/[0.04] transition-colors cursor-pointer group">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between mb-2">
+                  <Badge className={getCategoryStyle(pub.category)}>
+                    {pub.category}
+                  </Badge>
+                  <div className="flex items-center text-xs text-muted-foreground">
+                    <Calendar size={12} className="mr-1" />
+                    {new Date(pub.created_at).toLocaleDateString('fr-FR')}
+                  </div>
                 </div>
-              </div>
-              <CardTitle className="text-lg group-hover:text-primary transition-colors flex items-center justify-between">
-                {pub.title}
-                <ChevronRight size={18} className="text-muted-foreground group-hover:translate-x-1 transition-transform" />
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground line-clamp-2">
-                {pub.excerpt}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                <CardTitle className="text-lg group-hover:text-primary transition-colors flex items-center justify-between">
+                  {pub.title}
+                  <ChevronRight size={18} className="text-muted-foreground group-hover:translate-x-1 transition-transform" />
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground line-clamp-2">
+                  {pub.excerpt || pub.content}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
