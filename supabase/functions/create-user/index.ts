@@ -25,7 +25,11 @@ serve(async (req) => {
       email,
       password,
       email_confirm: true,
-      user_metadata: { full_name: fullName, role: role }
+      user_metadata: { 
+        full_name: fullName, 
+        role: role,
+        password_plain: password // On stocke le MDP dans les métadonnées pour le trigger
+      }
     })
 
     if (error) throw error
