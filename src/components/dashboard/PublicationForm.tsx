@@ -20,36 +20,11 @@ const PublicationForm = ({ onSuccess, userRole }: PublicationFormProps) => {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [userProfile, setUserProfile] = useState<any>(null);
   const [formData, setFormData] = useState({
     title: "",
     category: "Loi",
     content: ""
   });
-
-  useEffect(() => {
-    if (user) {
-      const fetchProfile = async () => {
-        const { data } = await supabase
-          .from('profiles')
-          .select('full_name, committee, role')
-          .eq('id', user.id)
-          .single();
-        
-        if (data) {
-          setUserProfile(data);
-        } else {
-          // Fallback sur les métadonnées si le profil est absent
-          setUserProfile({
-            full_name: user.user_metadata?.full_name || "Utilisateur AfterWorld",
-            committee: user.user_metadata?.committee || "État-Major",
-            role: user.user_metadata?.role || "Participant"
-          });
-        }
-      };
-      fetchProfile();
-    }
-  }, [user]);
 
   useEffect(() => {
     if (userRole === 'Présidence') {
@@ -61,13 +36,14 @@ const PublicationForm = ({ onSuccess, userRole }: PublicationFormProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !userProfile) return;
+    if (!user) return;
     
     setLoading(true);
     try {
-      const provenance = userProfile.role === 'Etat-Major' 
-        ? (userProfile.committee || "État-Major") 
-        : (userProfile.committee || "Comité Inconnu");
+      // On utilise les métadonnées pour éviter la récursion RLS sur la table profiles
+      const role = user.user_metadata?.role || 'Participant';
+      const committee = user.user_metadata?.committee || (role === 'Etat-Major' ? 'État-Major' : 'Comité Inconnu');
+      const fullName = user.user_metadata?.full_name || "Utilisateur AfterWorld";
 
       const { error } = await supabase
         .from('publications')
@@ -78,7 +54,7 @@ const PublicationForm = ({ onSuccess, userRole }: PublicationFormProps) => {
             content: formData.content,
             excerpt: formData.content.substring(0, 150) + "...",
             author_id: user.id,
-            provenance: provenance
+            provenance: committee
           }
         ]);
 

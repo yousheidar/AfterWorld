@@ -19,34 +19,27 @@ const CivilizationIndices = () => {
 
   const fetchIndices = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('civilization_indices')
-      .select('*')
-      .order('order_index', { ascending: true })
-      .order('name', { ascending: true });
-    
-    if (error) {
-      showError("Erreur lors du chargement des indices");
-    } else {
+    try {
+      const { data, error } = await supabase
+        .from('civilization_indices')
+        .select('*')
+        .order('order_index', { ascending: true })
+        .order('name', { ascending: true });
+      
+      if (error) throw error;
       setIndices(data || []);
+    } catch (err) {
+      showError("Erreur lors du chargement des indices");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
     fetchIndices();
     if (user) {
-      const getRole = async () => {
-        const { data } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-        
-        // Fallback sur les métadonnées si le profil est manquant
-        setUserRole(data?.role || user.user_metadata?.role || 'Participant');
-      };
-      getRole();
+      // On utilise directement les métadonnées pour éviter l'erreur de récursion RLS
+      setUserRole(user.user_metadata?.role || 'Participant');
     }
   }, [user]);
 

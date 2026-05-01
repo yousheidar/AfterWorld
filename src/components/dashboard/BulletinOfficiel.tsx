@@ -36,25 +36,17 @@ const BulletinOfficiel = () => {
   const fetchPublications = async () => {
     setLoading(true);
     try {
+      // On évite la jointure avec profiles qui cause la récursion infinie RLS
       const { data, error } = await supabase
         .from('publications')
-        .select(`
-          *,
-          profiles:author_id (full_name)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
       
-      if (error) {
-        const { data: simpleData } = await supabase
-          .from('publications')
-          .select('*')
-          .order('created_at', { ascending: false });
-        setPublications(simpleData || []);
-      } else {
-        setPublications(data || []);
-      }
+      if (error) throw error;
+      setPublications(data || []);
     } catch (err) {
-      console.error("Erreur inattendue:", err);
+      console.error("Erreur lors du chargement des publications:", err);
+      showError("Impossible de charger les publications");
     } finally {
       setLoading(false);
     }
@@ -64,17 +56,8 @@ const BulletinOfficiel = () => {
     fetchPublications();
 
     if (user) {
-      const getRole = async () => {
-        const { data } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-        
-        // Fallback sur les métadonnées si le profil est manquant
-        setUserRole(data?.role || user.user_metadata?.role || 'Participant');
-      };
-      getRole();
+      // Utilisation des métadonnées pour éviter la récursion RLS
+      setUserRole(user.user_metadata?.role || 'Participant');
     }
   }, [user]);
 
@@ -197,7 +180,7 @@ const BulletinOfficiel = () => {
                     {pub.excerpt || pub.content}
                   </p>
                   <div className="flex items-center text-[10px] uppercase tracking-widest text-muted-foreground/60 font-medium">
-                    <User size={10} className="mr-1" /> Émis par : {pub.profiles?.full_name || "Utilisateur AfterWorld"}
+                    <User size={10} className="mr-1" /> Document Officiel
                   </div>
                 </CardContent>
               </Card>
@@ -227,7 +210,6 @@ const BulletinOfficiel = () => {
                 <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground border-b border-white/5 pb-4">
                   <div className="flex items-center"><Calendar size={14} className="mr-2" /> {formatDateTime(selectedPub.created_at).date}</div>
                   <div className="flex items-center"><Clock size={14} className="mr-2" /> {formatDateTime(selectedPub.created_at).time}</div>
-                  <div className="flex items-center"><User size={14} className="mr-2" /> {selectedPub.profiles?.full_name || "Utilisateur AfterWorld"}</div>
                 </div>
               </DialogHeader>
               <div className="mt-6 text-lg leading-relaxed text-gray-300 whitespace-pre-wrap font-light">
