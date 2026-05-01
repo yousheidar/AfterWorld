@@ -11,9 +11,9 @@ import {
   FileText, 
   BarChart3,
   Menu,
-  Settings,
   MessageSquare,
-  Vote
+  Vote,
+  ShieldCheck
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import BulletinOfficiel from "@/components/dashboard/BulletinOfficiel";
@@ -21,6 +21,7 @@ import CivilizationIndices from "@/components/dashboard/CivilizationIndices";
 import DashboardOverview from "@/components/dashboard/DashboardOverview";
 import PrivateMessaging from "@/components/dashboard/PrivateMessaging";
 import Politics from "@/components/dashboard/Politics";
+import UserManagement from "@/components/dashboard/UserManagement";
 
 const Dashboard = () => {
   const { user, signOut, loading } = useAuth();
@@ -77,6 +78,7 @@ const Dashboard = () => {
     { id: "indices", icon: BarChart3, label: "Indices de civilisation" },
     { id: "politics", icon: Vote, label: "Politique" },
     ...(canAccessPrivate ? [{ id: "messages", icon: MessageSquare, label: "Canal Sécurisé" }] : []),
+    ...(isEtatMajor ? [{ id: "admin", icon: ShieldCheck, label: "Gestion Comptes" }] : []),
   ];
 
   const renderContent = () => {
@@ -85,6 +87,7 @@ const Dashboard = () => {
       case "indices": return <CivilizationIndices />;
       case "politics": return <Politics />;
       case "messages": return <PrivateMessaging />;
+      case "admin": return <UserManagement />;
       case "overview":
       default:
         return <DashboardOverview profile={profile} onNavigate={setActiveTab} />;
@@ -103,11 +106,6 @@ const Dashboard = () => {
                 <item.icon size={20} /><span className="font-medium">{item.label}</span>
               </button>
             ))}
-            {isEtatMajor && (
-              <button onClick={() => navigate("/admin")} className="w-full flex items-center space-x-3 px-4 py-3 mt-8 rounded-xl border border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 transition-all duration-200">
-                <Settings size={20} /><span className="font-medium">Panel Admin</span>
-              </button>
-            )}
           </nav>
           <div className="pt-6 border-t border-white/5">
             <button onClick={() => signOut()} className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-400/10 transition-all duration-200">
