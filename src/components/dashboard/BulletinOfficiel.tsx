@@ -17,25 +17,25 @@ const BulletinOfficiel = () => {
   const fetchPublications = async () => {
     setLoading(true);
     try {
-      // On récupère d'abord les publications
+      // On tente de récupérer avec la jointure profil
       const { data, error } = await supabase
         .from('publications')
         .select(`
           *,
-          author:profiles!publications_author_id_fkey (full_name)
+          profiles:author_id (full_name)
         `)
         .order('created_at', { ascending: false });
       
       if (error) {
-        console.error("Erreur fetch publications:", error);
-        // Tentative de repli sans la jointure si elle échoue
+        console.error("Erreur fetch:", error);
+        // Repli si la jointure échoue
         const { data: simpleData } = await supabase
           .from('publications')
           .select('*')
           .order('created_at', { ascending: false });
-        if (simpleData) setPublications(simpleData);
-      } else if (data) {
-        setPublications(data);
+        setPublications(simpleData || []);
+      } else {
+        setPublications(data || []);
       }
     } catch (err) {
       console.error("Erreur inattendue:", err);
@@ -122,7 +122,7 @@ const BulletinOfficiel = () => {
                   {pub.excerpt || pub.content}
                 </p>
                 <div className="flex items-center text-[10px] uppercase tracking-widest text-muted-foreground/60 font-medium">
-                  <User size={10} className="mr-1" /> Émis par : {pub.author?.full_name || pub.profiles?.full_name || "Anonyme"}
+                  <User size={10} className="mr-1" /> Émis par : {pub.profiles?.full_name || "Utilisateur AfterWorld"}
                 </div>
               </CardContent>
             </Card>
