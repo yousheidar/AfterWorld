@@ -1,26 +1,174 @@
 "use client";
 
-import React from 'react';
-import { Card } from "@/components/ui/card";
-import { BarChart3, Lock } from "lucide-react";
+import React, { useEffect, useState } from 'react';
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/components/AuthProvider";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Loader2, Trash2, TrendingUp, Activity } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { showSuccess, showError } from "@/utils/toast";
+import IndexForm from "./IndexForm";
 
 const CivilizationIndices = () => {
+  const { user } = useAuth();
+  const [indices, setIndices] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  const fetchIndices = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('civilization_indices')
+      .select('*')
+      .order('name');
+    
+    if (error) {
+      showError("Erreur lors du chargement des indices");
+    } else {
+      setIndices(data || []);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchIndices();
+    if (user) {
+      const getRole = async () => {
+        const { data } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+        if (data) setUserRole(data.role);
+      };
+      getRole();
+    }
+  }, [user]);
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Supprimer cet indice ?")) return;
+    const { error } = await supabase.from('civilization_indices').delete().eq('id', id);
+    if (error) showError("Erreur de suppression");
+    else {
+      showSuccess("Indice supprimé");
+      fetchIndices();
+    }
+  };
+
+  const isEtatMajor = userRole === 'Etat-Major';
+
+  // Calcul de la moyenne pondérée
+  const calculateGlobalScore = () => {
+    if (indices.length === 0) return 0;
+    let totalWeightedValue = 0;
+    let totalCoefficients = 0;
+
+    indices.forEach(idx => {
+      // Pour la moyenne globale, on normalise les points (-100/100) en échelle 0-100 si nécessaire
+      // Mais ici on va simplement faire la moyenne pondérée des valeurs brutes
+      totalWeightedValue += idx.value * idx.coefficient;
+      totalCoefficients += idx.coefficient;
+    });
+
+    return totalCoefficients > 0 ? Math.round(totalWeightedValue / totalCoefficients) : 0;
+  };
+
+  const globalScore = calculateGlobalScore();
+
+  // Fonction pour calculer la couleur de la jauge
+  const getGaugeColor = (value: number, unit: string) => {
+    const normalized = unit === 'points' ? (value + 100) / 2 : value;
+    if (normalized < 30) return "bg-red-500";
+    if (normalized < 60) return "bg-yellow-500";
+    return "bg-emerald-500";
+  };
+
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <h2 className="text-2xl font-bold tracking-tight">Indices de Civilisation</h2>
-      
-      <Card className="h-[400px] bg-white/[0.02] border-white/5 border-dashed flex flex-col items-center justify-center text-center p-8">
-        <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-          <BarChart3 size={32} className="text-primary" />
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Indices de Civilisation</h2>
+          <p className="text-sm text-muted-foreground">État global de la société AfterWorld</p>
         </div>
-        <h3 className="text-xl font-semibold mb-2">Données en cours de traitement</h3>
-        <p className="text-muted-foreground max-w-md">
-          Les indices de civilisation sont calculés en temps réel selon les décisions prises durant la conférence. Ce module sera activé prochainement.
-        </p>
-        <div className="mt-6 flex items-center text-xs text-primary/60 font-mono uppercase tracking-widest">
-          <Lock size={12} className="mr-2" /> Accès restreint - Phase d'initialisation
+        {isEtatMajor && <IndexForm onSuccess={fetchIndices} />}
+      </div>
+
+      {/* Score Global */}
+      <Card className="bg-gradient-to-br from-primary/20 to-transparent border-primary/20 overflow-hidden relative">
+        <div className="absolute top-0 right-0 p-8 opacity-10">
+          <TrendingUp size={120} />
         </div>
+        <CardContent className="pt-8 pb-8 flex flex-col items-center text-center">
+          <span className="text-sm font-medium uppercase tracking-[0.2em] text-primary mb-2">Indice de Progrès Global</span>
+          <div className="text-7xl font-black tracking-tighter mb-4">
+            {globalScore}<span className="text-3xl text-muted-foreground ml-1">%</span>
+          </div>
+          <div className="w-full max-w-md h-3 bg-white/5 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-primary transition-all duration-1000 ease-out shadow-[0_0_20px_rgba(59,130,246,0.5)]"
+              style={{ width: `${Math.max(0, Math.min(100, globalScore))}%` }}
+            />
+          </div>
+        </CardContent>
       </Card>
+
+      {loading ? (
+        <div className="flex justify-center py-12"><Loader2 className="animate-spin text-primary" /></div>
+      ) : (
+        <div className="grid gap-6">
+          {indices.map((idx) => (
+            <Card key={idx.id} className="bg-white/[0.02] border-white/5 hover:bg-white/[0.04] transition-all">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center">
+                      <Activity size={20} className="text-muted-foreground" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">{idx.name}</h3>
+                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Coef: {idx.coefficient}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-4">
+                    <div className="text-right">
+                      <span className="text-2xl font-bold">
+                        {idx.value}{idx.unit === 'percentage' ? '%' : ''}
+                      </span>
+                      <p className="text-[10px] text-muted-foreground uppercase">{idx.unit === 'percentage' ? 'Pourcentage' : 'Points'}</p>
+                    </div>
+                    {isEtatMajor && (
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="text-red-400 hover:bg-red-400/10"
+                        onClick={() => handleDelete(idx.id)}
+                      >
+                        <Trash2 size={16} />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Jauge */}
+                <div className="relative h-2 bg-white/5 rounded-full overflow-hidden">
+                  <div 
+                    className={`h-full transition-all duration-1000 ${getGaugeColor(idx.value, idx.unit)}`}
+                    style={{ 
+                      width: idx.unit === 'percentage' 
+                        ? `${idx.value}%` 
+                        : `${(idx.value + 100) / 2}%` 
+                    }}
+                  />
+                  {idx.unit === 'points' && (
+                    <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white/20" />
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
