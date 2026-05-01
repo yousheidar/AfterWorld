@@ -11,7 +11,8 @@ import {
   FileText, 
   BarChart3,
   Bell,
-  Menu
+  Menu,
+  Settings
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import BulletinOfficiel from "@/components/dashboard/BulletinOfficiel";
@@ -23,6 +24,7 @@ const Dashboard = () => {
   const [profile, setProfile] = useState<{ role: string; full_name: string } | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
+  const [hasAdminAccess, setHasAdminAccess] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -40,6 +42,9 @@ const Dashboard = () => {
         if (data) setProfile(data);
       };
       fetchProfile();
+      
+      // Vérifier si l'accès admin est actif dans cette session
+      setHasAdminAccess(sessionStorage.getItem("admin_access") === "true");
     }
   }, [user, loading, navigate]);
 
@@ -133,6 +138,17 @@ const Dashboard = () => {
                 <span className="font-medium">{item.label}</span>
               </button>
             ))}
+
+            {/* Bouton Panel Admin conditionnel */}
+            {hasAdminAccess && (
+              <button
+                onClick={() => navigate("/admin/panel")}
+                className="w-full flex items-center space-x-3 px-4 py-3 mt-8 rounded-xl border border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 transition-all duration-200"
+              >
+                <Settings size={20} />
+                <span className="font-medium">Panel Admin</span>
+              </button>
+            )}
           </nav>
 
           <div className="pt-6 border-t border-white/5">
