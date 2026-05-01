@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, Trash2, TrendingUp, ChevronUp, ChevronDown } from "lucide-react";
+import { Loader2, Trash2, TrendingUp, ChevronUp, ChevronDown, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { showSuccess, showError } from "@/utils/toast";
 import IndexForm from "./IndexForm";
@@ -20,15 +20,26 @@ const CivilizationIndices = () => {
   const fetchIndices = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      // On tente d'abord avec le tri par order_index
+      let { data, error } = await supabase
         .from('civilization_indices')
         .select('*')
-        .order('order_index', { ascending: true })
-        .order('name', { ascending: true });
+        .order('order_index', { ascending: true });
       
-      if (error) throw error;
+      // Si ça échoue (ex: colonne manquante), on replie sur le nom
+      if (error) {
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('civilization_indices')
+          .select('*')
+          .order('name', { ascending: true });
+        
+        if (fallbackError) throw fallbackError;
+        data = fallbackData;
+      }
+      
       setIndices(data || []);
     } catch (err) {
+      console.error("Erreur indices:", err);
       showError("Erreur lors du chargement des indices");
     } finally {
       setLoading(false);
@@ -38,7 +49,6 @@ const CivilizationIndices = () => {
   useEffect(() => {
     fetchIndices();
     if (user) {
-      // On utilise directement les métadonnées pour éviter l'erreur de récursion RLS
       setUserRole(user.user_metadata?.role || 'Participant');
     }
   }, [user]);
@@ -151,6 +161,12 @@ const CivilizationIndices = () => {
 
       {loading ? (
         <div className="flex justify-center py-12"><Loader2 className="animate-spin text-primary" /></div>
+      ) : indices.length === 0 ? (
+        <Card className="bg-white/[0.02] border-white/5 border-dashed p-12 text-center">
+          <BarChart3 className="mx-auto h-12 w-12 text-muted-foreground/20 mb-4" />
+          <h3 className="text-lg font-medium">Aucun indice configuré</h3>
+          <p className="text-muted-foreground">Les indices de civilisation apparaîtront ici une fois créés par l'État-Major.</p>
+        </Card>
       ) : (
         <div className="grid gap-6">
           {indices.map((idx, i) => {
