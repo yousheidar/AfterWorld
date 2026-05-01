@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
   TrendingUp, 
@@ -10,7 +10,8 @@ import {
   ChevronRight, 
   Loader2, 
   Building2,
-  Clock
+  Clock,
+  Megaphone
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -22,25 +23,36 @@ interface DashboardOverviewProps {
 const DashboardOverview = ({ profile, onNavigate }: DashboardOverviewProps) => {
   const [indices, setIndices] = useState<any[]>([]);
   const [latestPubs, setLatestPubs] = useState<any[]>([]);
+  const [messagesML, setMessagesML] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // 1. Récupérer les indices pour le score global
+        // 1. Récupérer les indices
         const { data: indicesData } = await supabase
           .from('civilization_indices')
           .select('*');
         setIndices(indicesData || []);
 
-        // 2. Récupérer les 3 dernières publications
+        // 2. Récupérer les 3 dernières publications (Lois, Décrets, etc.)
         const { data: pubsData } = await supabase
           .from('publications')
           .select('*')
+          .neq('category', 'Message')
           .order('created_at', { ascending: false })
           .limit(3);
         setLatestPubs(pubsData || []);
+
+        // 3. Récupérer les 3 derniers messages de l'État-Major (ML)
+        const { data: mlData } = await supabase
+          .from('publications')
+          .select('*')
+          .eq('category', 'Message')
+          .order('created_at', { ascending: false })
+          .limit(3);
+        setMessagesML(mlData || []);
       } catch (err) {
         console.error(err);
       } finally {
@@ -52,7 +64,6 @@ const DashboardOverview = ({ profile, onNavigate }: DashboardOverviewProps) => {
 
   const calculateGlobalScore = () => {
     if (indices.length === 0) return 0;
-    
     let standardWeightedSum = 0;
     let standardCoefSum = 0;
     let economicModifier = 0;
@@ -77,9 +88,37 @@ const DashboardOverview = ({ profile, onNavigate }: DashboardOverviewProps) => {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="mb-10">
+      <div className="mb-6">
         <h1 className="text-3xl font-bold tracking-tight mb-2">Bonjour, {profile?.full_name?.split(' ')[0]}</h1>
-        <p className="text-muted-foreground">Voici l'état actuel de la conférence AfterWorld.</p>
+        <p className="text-muted-foreground">État actuel de la conférence AfterWorld.</p>
+      </div>
+
+      {/* Section ML (Messages État-Major) */}
+      <div className="space-y-4">
+        <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-primary flex items-center">
+          <Megaphone className="mr-2 h-4 w-4" /> Messages de l'État-Major (ML)
+        </h3>
+        <div className="grid gap-3">
+          {messagesML.length === 0 ? (
+            <Card className="bg-white/[0.02] border-white/5 p-4 italic text-sm text-muted-foreground">
+              Aucun message récent de l'État-Major.
+            </Card>
+          ) : (
+            messagesML.map((ml) => (
+              <Card key={ml.id} className="bg-primary/5 border-primary/20 border-l-4 border-l-primary">
+                <CardContent className="p-4">
+                  <div className="flex justify-between items-start mb-1">
+                    <span className="font-bold text-primary text-sm">{ml.title}</span>
+                    <span className="text-[10px] text-muted-foreground uppercase">
+                      {new Date(ml.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                  <p className="text-sm text-white/90 leading-relaxed">{ml.content}</p>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -122,11 +161,11 @@ const DashboardOverview = ({ profile, onNavigate }: DashboardOverviewProps) => {
         </Card>
       </div>
 
-      {/* Dernières Publications (ML) */}
+      {/* Dernières Publications (Lois/Décrets) */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold flex items-center">
-            <FileText className="mr-2 h-5 w-5 text-primary" /> Dernières Mises en Ligne
+            <FileText className="mr-2 h-5 w-5 text-primary" /> Bulletin Officiel (Dernières Mises en Ligne)
           </h3>
           <button 
             onClick={() => onNavigate("bulletin")}
@@ -138,7 +177,7 @@ const DashboardOverview = ({ profile, onNavigate }: DashboardOverviewProps) => {
 
         <div className="grid gap-4">
           {latestPubs.length === 0 ? (
-            <p className="text-sm text-muted-foreground italic py-4">Aucune publication récente.</p>
+            <p className="text-sm text-muted-foreground italic py-4">Aucune publication officielle récente.</p>
           ) : (
             latestPubs.map((pub) => (
               <Card 

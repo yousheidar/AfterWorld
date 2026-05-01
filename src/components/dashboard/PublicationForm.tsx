@@ -29,6 +29,8 @@ const PublicationForm = ({ onSuccess, userRole }: PublicationFormProps) => {
   useEffect(() => {
     if (userRole === 'Présidence') {
       setFormData(prev => ({ ...prev, category: "Loi" }));
+    } else if (userRole === 'Etat-Major') {
+      setFormData(prev => ({ ...prev, category: "Message" }));
     } else {
       setFormData(prev => ({ ...prev, category: "Décision" }));
     }
@@ -40,10 +42,8 @@ const PublicationForm = ({ onSuccess, userRole }: PublicationFormProps) => {
     
     setLoading(true);
     try {
-      // On utilise les métadonnées pour éviter la récursion RLS sur la table profiles
       const role = user.user_metadata?.role || 'Participant';
       const committee = user.user_metadata?.committee || (role === 'Etat-Major' ? 'État-Major' : 'Comité Inconnu');
-      const fullName = user.user_metadata?.full_name || "Utilisateur AfterWorld";
 
       const { error } = await supabase
         .from('publications')
@@ -52,7 +52,7 @@ const PublicationForm = ({ onSuccess, userRole }: PublicationFormProps) => {
             title: formData.title,
             category: formData.category,
             content: formData.content,
-            excerpt: formData.content.substring(0, 150) + "...",
+            excerpt: formData.content.substring(0, 150) + (formData.content.length > 150 ? "..." : ""),
             author_id: user.id,
             provenance: committee
           }
@@ -60,16 +60,16 @@ const PublicationForm = ({ onSuccess, userRole }: PublicationFormProps) => {
 
       if (error) throw error;
 
-      showSuccess("Publication enregistrée avec succès");
+      showSuccess(formData.category === 'Message' ? "Message ML envoyé" : "Publication enregistrée");
       setFormData({ 
         title: "", 
-        category: userRole === 'Présidence' ? "Loi" : "Décision", 
+        category: userRole === 'Etat-Major' ? "Message" : (userRole === 'Présidence' ? "Loi" : "Décision"), 
         content: "" 
       });
       setOpen(false);
       onSuccess();
     } catch (err: any) {
-      showError("Erreur lors de la publication : " + err.message);
+      showError("Erreur : " + err.message);
     } finally {
       setLoading(false);
     }
@@ -77,6 +77,13 @@ const PublicationForm = ({ onSuccess, userRole }: PublicationFormProps) => {
 
   const categories = userRole === 'Présidence' 
     ? [{ value: "Loi", label: "Loi" }]
+    : userRole === 'Etat-Major'
+    ? [
+        { value: "Message", label: "Message ML (Flash)" },
+        { value: "Loi", label: "Loi" },
+        { value: "Décision", label: "Décision" },
+        { value: "Décret", label: "Décret" }
+      ]
     : [
         { value: "Loi", label: "Loi" },
         { value: "Décision", label: "Décision" },
@@ -87,18 +94,18 @@ const PublicationForm = ({ onSuccess, userRole }: PublicationFormProps) => {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button className="bg-primary hover:bg-primary/90">
-          <Plus className="mr-2 h-4 w-4" /> Nouvelle Publication
+          <Plus className="mr-2 h-4 w-4" /> Nouvelle Publication / ML
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[525px] bg-card border-white/10">
         <DialogHeader>
-          <DialogTitle>Publier au Bulletin Officiel</DialogTitle>
+          <DialogTitle>Publier au Bulletin ou Envoyer un ML</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Titre</label>
+            <label className="text-sm font-medium">Titre / Objet</label>
             <Input 
-              placeholder="Titre de la publication" 
+              placeholder={formData.category === 'Message' ? "Objet du message flash" : "Titre de la publication"} 
               value={formData.title}
               onChange={(e) => setFormData({...formData, title: e.target.value})}
               required
@@ -107,7 +114,7 @@ const PublicationForm = ({ onSuccess, userRole }: PublicationFormProps) => {
           </div>
           
           <div className="space-y-2">
-            <label className="text-sm font-medium">Libellé</label>
+            <label className="text-sm font-medium">Type de publication</label>
             <Select 
               value={formData.category} 
               onValueChange={(v) => setFormData({...formData, category: v})}
@@ -127,7 +134,7 @@ const PublicationForm = ({ onSuccess, userRole }: PublicationFormProps) => {
           <div className="space-y-2">
             <label className="text-sm font-medium">Contenu</label>
             <Textarea 
-              placeholder="Détails de la publication..." 
+              placeholder={formData.category === 'Message' ? "Écrivez votre message à la conférence..." : "Détails de la publication..."} 
               className="min-h-[200px] bg-background/50 border-white/10"
               value={formData.content}
               onChange={(e) => setFormData({...formData, content: e.target.value})}
@@ -137,7 +144,7 @@ const PublicationForm = ({ onSuccess, userRole }: PublicationFormProps) => {
 
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-            Publier officiellement
+            {formData.category === 'Message' ? "Envoyer le Message ML" : "Publier officiellement"}
           </Button>
         </form>
       </DialogContent>
