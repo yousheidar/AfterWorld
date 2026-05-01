@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { 
   TrendingUp, 
   FileText, 
@@ -12,8 +11,7 @@ import {
   Building2,
   Clock,
   Megaphone,
-  Trash2,
-  Vote
+  Trash2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import PublicationForm from "./PublicationForm";
@@ -33,7 +31,6 @@ const DashboardOverview = ({ profile, onNavigate }: DashboardOverviewProps) => {
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
   const fetchData = async () => {
-    setLoading(true);
     try {
       const { data: indicesData } = await supabase.from('civilization_indices').select('*');
       setIndices(indicesData || []);
@@ -61,6 +58,17 @@ const DashboardOverview = ({ profile, onNavigate }: DashboardOverviewProps) => {
 
   useEffect(() => {
     fetchData();
+
+    // Écoute en temps réel des publications et des indices
+    const channel = supabase
+      .channel('overview_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'publications' }, () => fetchData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'civilization_indices' }, () => fetchData())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const handleDeleteMessage = async (id: string) => {
@@ -70,7 +78,6 @@ const DashboardOverview = ({ profile, onNavigate }: DashboardOverviewProps) => {
       const { error } = await supabase.from('publications').delete().eq('id', id);
       if (error) throw error;
       showSuccess("Message supprimé");
-      fetchData();
     } catch (err: any) {
       showError("Erreur : " + err.message);
     } finally {
@@ -103,7 +110,6 @@ const DashboardOverview = ({ profile, onNavigate }: DashboardOverviewProps) => {
         <p className="text-muted-foreground text-sm">État actuel de la conférence AfterWorld.</p>
       </div>
 
-      {/* 1. Indicateur Global */}
       <Card className="bg-gradient-to-br from-primary/20 to-transparent border-primary/20 cursor-pointer hover:bg-primary/5 transition-all group" onClick={() => onNavigate("indices")}>
         <CardContent className="pt-8 pb-8 flex flex-col items-center text-center relative overflow-hidden">
           <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity"><TrendingUp size={100} /></div>
@@ -116,16 +122,14 @@ const DashboardOverview = ({ profile, onNavigate }: DashboardOverviewProps) => {
         </CardContent>
       </Card>
 
-      {/* 2. Messages et Bulletin (Côte à côte) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Colonne Messages */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-primary flex items-center">
               <Megaphone className="mr-2 h-4 w-4" /> Messages État-Major
             </h3>
             {isEtatMajor && (
-              <PublicationForm onSuccess={fetchData} userRole={profile.role} />
+              <PublicationForm onSuccess={() => {}} userRole={profile.role} />
             )}
           </div>
           
@@ -165,7 +169,6 @@ const DashboardOverview = ({ profile, onNavigate }: DashboardOverviewProps) => {
           </Card>
         </div>
 
-        {/* Colonne Bulletin */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-muted-foreground flex items-center">
