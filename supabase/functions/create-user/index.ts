@@ -17,9 +17,9 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const { email, password, fullName, role } = await req.json()
+    const { email, password, fullName, role, committee } = await req.json()
 
-    console.log(`[create-user] Tentative de création pour ${email} avec le rôle ${role}`);
+    console.log(`[create-user] Création pour ${email} (Rôle: ${role}, Comité: ${committee})`);
 
     const { data, error } = await supabaseAdmin.auth.admin.createUser({
       email,
@@ -28,7 +28,8 @@ serve(async (req) => {
       user_metadata: { 
         full_name: fullName, 
         role: role,
-        password_plain: password // On stocke le MDP dans les métadonnées pour le trigger
+        committee: committee,
+        password_plain: password
       }
     })
 

@@ -20,13 +20,27 @@ const PublicationForm = ({ onSuccess, userRole }: PublicationFormProps) => {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [userProfile, setUserProfile] = useState<any>(null);
   const [formData, setFormData] = useState({
     title: "",
     category: "Loi",
     content: ""
   });
 
-  // Ajuster la catégorie par défaut si le rôle change
+  useEffect(() => {
+    if (user) {
+      const fetchProfile = async () => {
+        const { data } = await supabase
+          .from('profiles')
+          .select('full_name, committee, role')
+          .eq('id', user.id)
+          .single();
+        if (data) setUserProfile(data);
+      };
+      fetchProfile();
+    }
+  }, [user]);
+
   useEffect(() => {
     if (userRole === 'Présidence') {
       setFormData(prev => ({ ...prev, category: "Loi" }));
@@ -37,10 +51,14 @@ const PublicationForm = ({ onSuccess, userRole }: PublicationFormProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user || !userProfile) return;
     
     setLoading(true);
     try {
+      const provenance = userProfile.role === 'Etat-Major' 
+        ? (userProfile.committee || "État-Major") 
+        : (userProfile.committee || "Comité Inconnu");
+
       const { error } = await supabase
         .from('publications')
         .insert([
@@ -49,7 +67,8 @@ const PublicationForm = ({ onSuccess, userRole }: PublicationFormProps) => {
             category: formData.category,
             content: formData.content,
             excerpt: formData.content.substring(0, 150) + "...",
-            author_id: user.id
+            author_id: user.id,
+            provenance: provenance
           }
         ]);
 
@@ -117,9 +136,6 @@ const PublicationForm = ({ onSuccess, userRole }: PublicationFormProps) => {
                 ))}
               </SelectContent>
             </Select>
-            {userRole === 'Présidence' && (
-              <p className="text-[10px] text-muted-foreground italic">Votre rôle est restreint à la publication de Lois.</p>
-            )}
           </div>
 
           <div className="space-y-2">

@@ -18,7 +18,8 @@ import {
   RefreshCw, 
   Eye, 
   EyeOff, 
-  Trash2 
+  Trash2,
+  Building2
 } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
 
@@ -34,7 +35,8 @@ const AdminPanel = () => {
     email: "",
     password: "",
     fullName: "",
-    role: "Participant"
+    role: "Participant",
+    committee: ""
   });
 
   useEffect(() => {
@@ -66,14 +68,14 @@ const AdminPanel = () => {
     e.preventDefault();
     setCreating(true);
     try {
-      const { data, error } = await supabase.functions.invoke('create-user', {
+      const { error } = await supabase.functions.invoke('create-user', {
         body: formData
       });
 
       if (error) throw error;
       
       showSuccess(`Compte créé pour ${formData.fullName}`);
-      setFormData({ email: "", password: "", fullName: "", role: "Participant" });
+      setFormData({ email: "", password: "", fullName: "", role: "Participant", committee: "" });
       fetchProfiles();
     } catch (err: any) {
       showError("Erreur : " + err.message);
@@ -133,7 +135,7 @@ const AdminPanel = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleCreateUser} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+            <form onSubmit={handleCreateUser} className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
               <div className="space-y-2">
                 <label className="text-xs font-medium text-muted-foreground">Nom Complet</label>
                 <Input 
@@ -176,6 +178,15 @@ const AdminPanel = () => {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground">Comité / Provenance</label>
+                <Input 
+                  placeholder={formData.role === 'Etat-Major' ? 'État-Major' : 'Nom du comité'} 
+                  value={formData.committee}
+                  onChange={(e) => setFormData({...formData, committee: e.target.value})}
+                  required={formData.role !== 'Participant'}
+                />
+              </div>
               <Button type="submit" disabled={creating} className="w-full">
                 {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Créer"}
               </Button>
@@ -189,20 +200,28 @@ const AdminPanel = () => {
               <TableRow className="hover:bg-transparent border-white/10">
                 <TableHead>Nom</TableHead>
                 <TableHead>Rôle</TableHead>
+                <TableHead>Comité</TableHead>
                 <TableHead>Mot de passe</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">Chargement...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Chargement...</TableCell></TableRow>
               ) : profiles.length === 0 ? (
-                <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">Aucun compte trouvé</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Aucun compte trouvé</TableCell></TableRow>
               ) : (
                 profiles.map((p) => (
                   <TableRow key={p.id} className="border-white/5 hover:bg-white/5">
                     <TableCell className="font-medium">{p.full_name}</TableCell>
                     <TableCell>{getRoleBadge(p.role)}</TableCell>
+                    <TableCell>
+                      {p.committee ? (
+                        <div className="flex items-center text-xs text-muted-foreground">
+                          <Building2 size={12} className="mr-1" /> {p.committee}
+                        </div>
+                      ) : "-"}
+                    </TableCell>
                     <TableCell>
                       <code className="bg-black/30 px-2 py-1 rounded text-xs">
                         {showPasswords ? (p.password_plain || "Inconnu") : "••••••••"}

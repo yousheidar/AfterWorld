@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, ChevronRight, FileText, Loader2 } from "lucide-react";
+import { Calendar, ChevronRight, FileText, Loader2, User, Building2 } from "lucide-react";
 import PublicationForm from "./PublicationForm";
 
 const BulletinOfficiel = () => {
@@ -16,9 +16,13 @@ const BulletinOfficiel = () => {
 
   const fetchPublications = async () => {
     setLoading(true);
+    // On joint les profils pour avoir le nom de l'auteur
     const { data, error } = await supabase
       .from('publications')
-      .select('*')
+      .select(`
+        *,
+        profiles:author_id (full_name)
+      `)
       .order('created_at', { ascending: false });
     
     if (!error && data) {
@@ -80,9 +84,16 @@ const BulletinOfficiel = () => {
             <Card key={pub.id} className="bg-white/[0.02] border-white/5 hover:bg-white/[0.04] transition-colors cursor-pointer group">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between mb-2">
-                  <Badge className={getCategoryStyle(pub.category)}>
-                    {pub.category}
-                  </Badge>
+                  <div className="flex gap-2">
+                    <Badge className={getCategoryStyle(pub.category)}>
+                      {pub.category}
+                    </Badge>
+                    {pub.provenance && (
+                      <Badge variant="outline" className="border-white/10 text-muted-foreground">
+                        <Building2 size={10} className="mr-1" /> {pub.provenance}
+                      </Badge>
+                    )}
+                  </div>
                   <div className="flex items-center text-xs text-muted-foreground">
                     <Calendar size={12} className="mr-1" />
                     {new Date(pub.created_at).toLocaleDateString('fr-FR')}
@@ -94,9 +105,12 @@ const BulletinOfficiel = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground line-clamp-2">
+                <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
                   {pub.excerpt || pub.content}
                 </p>
+                <div className="flex items-center text-[10px] uppercase tracking-widest text-muted-foreground/60 font-medium">
+                  <User size={10} className="mr-1" /> Émis par : {pub.profiles?.full_name || "Anonyme"}
+                </div>
               </CardContent>
             </Card>
           ))}
