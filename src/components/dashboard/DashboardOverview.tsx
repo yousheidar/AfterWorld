@@ -17,6 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 import PublicationForm from "./PublicationForm";
 import { showSuccess, showError } from "@/utils/toast";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface DashboardOverviewProps {
   profile: any;
@@ -48,8 +49,7 @@ const DashboardOverview = ({ profile, onNavigate }: DashboardOverviewProps) => {
         .from('publications')
         .select('*')
         .eq('category', 'Message')
-        .order('created_at', { ascending: false })
-        .limit(3); // Limite à 3 messages
+        .order('created_at', { ascending: false }); // On récupère tout
       setMessagesML(mlData || []);
     } catch (err) {
       console.error(err);
@@ -111,36 +111,41 @@ const DashboardOverview = ({ profile, onNavigate }: DashboardOverviewProps) => {
             <PublicationForm onSuccess={fetchData} userRole={profile.role} />
           )}
         </div>
-        <div className="grid gap-3">
-          {messagesML.length === 0 ? (
-            <Card className="bg-white/[0.02] border-white/5 p-4 italic text-sm text-muted-foreground">Aucun message récent.</Card>
-          ) : (
-            messagesML.map((ml) => (
-              <Card key={ml.id} className="bg-primary/5 border-primary/20 border-l-4 border-l-primary group relative">
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-start mb-1">
-                    <span className="font-bold text-primary text-sm">{ml.title}</span>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-[10px] text-muted-foreground uppercase">
-                        {new Date(ml.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                      {isEtatMajor && (
-                        <button 
-                          onClick={() => handleDeleteMessage(ml.id)}
-                          disabled={isDeleting === ml.id}
-                          className="text-red-400 opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-300"
-                        >
-                          {isDeleting === ml.id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  <p className="text-sm text-white/90 leading-relaxed">{ml.content}</p>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </div>
+        
+        <Card className="bg-white/[0.02] border-white/5 overflow-hidden">
+          <ScrollArea className="h-[300px] w-full p-4">
+            <div className="grid gap-3 pr-4">
+              {messagesML.length === 0 ? (
+                <p className="italic text-sm text-muted-foreground text-center py-8">Aucun message récent.</p>
+              ) : (
+                messagesML.map((ml) => (
+                  <Card key={ml.id} className="bg-primary/5 border-primary/20 border-l-4 border-l-primary group relative">
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start mb-1">
+                        <span className="font-bold text-primary text-sm">{ml.title}</span>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-[10px] text-muted-foreground uppercase">
+                            {new Date(ml.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                          {isEtatMajor && (
+                            <button 
+                              onClick={() => handleDeleteMessage(ml.id)}
+                              disabled={isDeleting === ml.id}
+                              className="text-red-400 opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-300"
+                            >
+                              {isDeleting === ml.id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-sm text-white/90 leading-relaxed whitespace-pre-wrap">{ml.content}</p>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
