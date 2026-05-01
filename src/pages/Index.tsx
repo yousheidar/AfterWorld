@@ -1,6 +1,5 @@
 import React from 'react';
 import LoginForm from "@/components/LoginForm";
-import { MadeWithDyad } from "@/components/made-with-dyad";
 
 const Index = () => {
   return (
@@ -20,10 +19,6 @@ const Index = () => {
         </div>
 
         <LoginForm />
-      </div>
-
-      <div className="mt-12 z-10">
-        <MadeWithDyad />
       </div>
     </div>
   );

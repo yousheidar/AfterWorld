@@ -10,7 +10,6 @@ import {
   LayoutDashboard, 
   FileText, 
   BarChart3,
-  Bell,
   Menu,
   Settings,
   MessageSquare,
@@ -123,7 +122,6 @@ const Dashboard = () => {
           <button className="lg:hidden p-2 hover:bg-white/5 rounded-lg" onClick={() => setIsSidebarOpen(true)}><Menu size={24} /></button>
           <div className="flex-1 lg:flex-none" />
           <div className="flex items-center space-x-6">
-            <button className="relative p-2 text-muted-foreground hover:text-white transition-colors"><Bell size={22} /><span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full border-2 border-[#050505]" /></button>
             <div className="flex items-center space-x-4 pl-6 border-l border-white/5">
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-semibold">{profile?.full_name || 'Utilisateur'}</p>
