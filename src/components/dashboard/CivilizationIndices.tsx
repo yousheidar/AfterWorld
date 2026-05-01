@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { showSuccess, showError } from "@/utils/toast";
 import IndexForm from "./IndexForm";
 import EditIndexDialog from "./EditIndexDialog";
+import { cn } from "@/lib/utils";
 
 const CivilizationIndices = () => {
   const { user } = useAuth();
@@ -64,11 +65,13 @@ const CivilizationIndices = () => {
     let standardWeightedSum = 0;
     let standardCoefSum = 0;
     let economicModifier = 0;
+    let hasEconomic = false;
 
     indices.forEach(idx => {
       if (idx.name === "Croissance économique") {
-        // Agit comme un modificateur direct pondéré par son coefficient
-        economicModifier += (idx.value * idx.coefficient);
+        // On stocke la valeur de croissance (ex: 20 pour +20%)
+        economicModifier = idx.value;
+        hasEconomic = true;
       } else {
         standardWeightedSum += (idx.value * idx.coefficient);
         standardCoefSum += idx.coefficient;
@@ -76,9 +79,16 @@ const CivilizationIndices = () => {
     });
 
     const baseScore = standardCoefSum > 0 ? (standardWeightedSum / standardCoefSum) : 0;
-    // Le score final est la base + le bonus/malus de croissance, bridé entre 0 et 100
-    const finalScore = Math.round(baseScore + economicModifier);
-    return Math.max(0, Math.min(100, finalScore));
+    
+    // Calcul proportionnel : le score de base est multiplié par (1 + croissance%)
+    // Exemple : base 50 et croissance +20% -> 50 * 1.2 = 60
+    // Exemple : base 80 et croissance -10% -> 80 * 0.9 = 72
+    let finalScore = baseScore;
+    if (hasEconomic) {
+      finalScore = baseScore * (1 + (economicModifier / 100));
+    }
+
+    return Math.max(0, Math.min(100, Math.round(finalScore)));
   };
 
   const globalScore = calculateGlobalScore();
@@ -137,13 +147,18 @@ const CivilizationIndices = () => {
                       <div>
                         <h3 className="font-semibold">{idx.name}</h3>
                         <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
-                          {isEconomic ? "Modificateur de score" : `Coef: ${idx.coefficient}`}
+                          {isEconomic 
+                            ? "Croissance attendue pour les 5 prochaines années" 
+                            : `Coefficient d'impact : ${idx.coefficient}`}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
                       <div className="text-right mr-2">
-                        <span className={cn("text-2xl font-bold", isEconomic && idx.value > 0 ? "text-emerald-400" : isEconomic && idx.value < 0 ? "text-red-400" : "")}>
+                        <span className={cn(
+                          "text-2xl font-bold", 
+                          isEconomic && idx.value > 0 ? "text-emerald-400" : isEconomic && idx.value < 0 ? "text-red-400" : ""
+                        )}>
                           {idx.value > 0 && isEconomic ? "+" : ""}{idx.value}%
                         </span>
                         <p className="text-[10px] text-muted-foreground uppercase">Variation</p>
@@ -167,7 +182,6 @@ const CivilizationIndices = () => {
                   <div className="relative h-2 bg-white/5 rounded-full overflow-hidden">
                     {isEconomic ? (
                       <>
-                        {/* Jauge centrée pour la croissance */}
                         <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white/20 z-10" />
                         <div 
                           className={cn("absolute h-full transition-all duration-1000", getGaugeColor(idx.value, true))}
@@ -201,5 +215,4 @@ const CivilizationIndices = () => {
   );
 };
 
-import { cn } from "@/lib/utils";
 export default CivilizationIndices;
