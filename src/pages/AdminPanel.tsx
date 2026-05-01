@@ -22,7 +22,8 @@ import {
   Trash2,
   Building2,
   Lock,
-  AlertTriangle
+  AlertTriangle,
+  Mail
 } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
 
@@ -55,7 +56,6 @@ const AdminPanel = () => {
 
       setIsAuthorized(true);
       
-      // Vérifier le rôle réel de l'utilisateur connecté
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { data: profile } = await supabase
@@ -80,7 +80,6 @@ const AdminPanel = () => {
         .select('*');
       
       if (error) {
-        console.error("Erreur RLS ou SQL:", error);
         showError("Erreur de lecture. Seul l'État-Major peut voir tous les comptes.");
         setProfiles([]);
       } else {
@@ -91,7 +90,7 @@ const AdminPanel = () => {
         setProfiles(sorted);
       }
     } catch (err) {
-      showError("Une erreur est survenue lors du chargement.");
+      showError("Une erreur est survenue.");
     } finally {
       setLoading(false);
     }
@@ -101,7 +100,7 @@ const AdminPanel = () => {
     e.preventDefault();
     setCreating(true);
     try {
-      const { data, error } = await supabase.functions.invoke('create-user', {
+      const { error } = await supabase.functions.invoke('create-user', {
         body: formData
       });
 
@@ -145,13 +144,7 @@ const AdminPanel = () => {
     }
   };
 
-  if (isAuthorized === null) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+  if (isAuthorized === null) return null;
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8 space-y-8">
@@ -179,8 +172,7 @@ const AdminPanel = () => {
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Accès Restreint</AlertTitle>
             <AlertDescription>
-              Votre compte actuel ({currentUserRole || 'Inconnu'}) n'a pas les permissions "Etat-Major" dans la base de données. 
-              Vous ne verrez que votre propre profil. Connectez-vous avec un compte Etat-Major pour gérer tous les participants.
+              Seul l'État-Major peut gérer tous les comptes.
             </AlertDescription>
           </Alert>
         )}
@@ -236,9 +228,9 @@ const AdminPanel = () => {
                 </Select>
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-medium text-muted-foreground">Comité / Provenance</label>
+                <label className="text-xs font-medium text-muted-foreground">Comité</label>
                 <Input 
-                  placeholder={formData.role === 'Etat-Major' ? 'État-Major' : 'Nom du comité'} 
+                  placeholder="Nom du comité" 
                   value={formData.committee}
                   onChange={(e) => setFormData({...formData, committee: e.target.value})}
                   required={formData.role !== 'Participant'}
@@ -256,6 +248,7 @@ const AdminPanel = () => {
             <TableHeader>
               <TableRow className="hover:bg-transparent border-white/10">
                 <TableHead>Nom</TableHead>
+                <TableHead>Email</TableHead>
                 <TableHead>Rôle</TableHead>
                 <TableHead>Comité</TableHead>
                 <TableHead>Mot de passe</TableHead>
@@ -264,13 +257,18 @@ const AdminPanel = () => {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Chargement...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Chargement...</TableCell></TableRow>
               ) : profiles.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Aucun compte visible (Vérifiez vos permissions RLS)</TableCell></TableRow>
+                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Aucun compte trouvé</TableCell></TableRow>
               ) : (
                 profiles.map((p) => (
                   <TableRow key={p.id} className="border-white/5 hover:bg-white/5">
                     <TableCell className="font-medium">{p.full_name}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center text-xs text-muted-foreground">
+                        <Mail size={12} className="mr-1" /> {p.email || "Non renseigné"}
+                      </div>
+                    </TableCell>
                     <TableCell>{getRoleBadge(p.role)}</TableCell>
                     <TableCell>
                       {p.committee ? (
