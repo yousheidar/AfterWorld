@@ -3,11 +3,11 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Shield, Send, Trash2, Loader2, User } from "lucide-react";
+import { Shield, Send, Trash2, Loader2 } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
 import { cn } from "@/lib/utils";
 
@@ -27,13 +27,22 @@ const PrivateMessaging = () => {
     try {
       const { data, error } = await supabase
         .from('private_messages')
-        .select('*, profiles(full_name, role)')
+        .select(`
+          id,
+          content,
+          created_at,
+          sender_id,
+          profiles:sender_id (
+            full_name,
+            role
+          )
+        `)
         .order('created_at', { ascending: true });
       
       if (error) throw error;
       setMessages(data || []);
     } catch (err) {
-      console.error(err);
+      console.error("Erreur messagerie:", err);
     } finally {
       setLoading(false);
     }
@@ -42,9 +51,8 @@ const PrivateMessaging = () => {
   useEffect(() => {
     fetchMessages();
     
-    // Real-time subscription
     const channel = supabase
-      .channel('private_messages_changes')
+      .channel('private_messages_realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'private_messages' }, () => {
         fetchMessages();
       })
@@ -53,7 +61,7 @@ const PrivateMessaging = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [isAuthorized]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -125,12 +133,14 @@ const PrivateMessaging = () => {
               messages.map((msg) => {
                 const isMe = msg.sender_id === user?.id;
                 const canDelete = isMe || userRole === 'Etat-Major';
+                const senderName = msg.profiles?.full_name || "Utilisateur";
+                const senderRole = msg.profiles?.role || "Inconnu";
                 
                 return (
                   <div key={msg.id} className={cn("flex flex-col max-w-[80%]", isMe ? "ml-auto items-end" : "mr-auto items-start")}>
                     <div className="flex items-center space-x-2 mb-1 px-1">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                        {msg.profiles?.full_name} ({msg.profiles?.role})
+                        {senderName} ({senderRole})
                       </span>
                       <span className="text-[8px] text-muted-foreground/50">
                         {new Date(msg.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
