@@ -36,22 +36,21 @@ const DashboardOverview = ({ profile, onNavigate }: DashboardOverviewProps) => {
           .select('*');
         setIndices(indicesData || []);
 
-        // 2. Récupérer les 3 dernières publications (Lois, Décrets, etc.)
+        // 2. Récupérer les 5 dernières publications (tout confondu pour le flux)
         const { data: pubsData } = await supabase
           .from('publications')
           .select('*')
-          .neq('category', 'Message')
           .order('created_at', { ascending: false })
-          .limit(3);
+          .limit(5);
         setLatestPubs(pubsData || []);
 
-        // 3. Récupérer les 3 derniers messages de l'État-Major
+        // 3. Récupérer les 5 derniers messages de l'État-Major pour la section dédiée
         const { data: mlData } = await supabase
           .from('publications')
           .select('*')
           .eq('category', 'Message')
           .order('created_at', { ascending: false })
-          .limit(3);
+          .limit(5);
         setMessagesML(mlData || []);
       } catch (err) {
         console.error(err);
@@ -161,7 +160,7 @@ const DashboardOverview = ({ profile, onNavigate }: DashboardOverviewProps) => {
         </Card>
       </div>
 
-      {/* Dernières Publications (Lois/Décrets) */}
+      {/* Dernières Publications (Lois/Décrets/Messages) */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold flex items-center">
@@ -189,15 +188,18 @@ const DashboardOverview = ({ profile, onNavigate }: DashboardOverviewProps) => {
                   <div className="flex items-center space-x-4">
                     <div className={cn(
                       "p-2 rounded-lg",
-                      pub.category === 'Loi' ? "bg-red-500/10 text-red-400" : "bg-blue-500/10 text-blue-400"
+                      pub.category === 'Loi' ? "bg-red-500/10 text-red-400" : 
+                      pub.category === 'Message' ? "bg-amber-500/10 text-amber-400" :
+                      "bg-blue-500/10 text-blue-400"
                     )}>
-                      <FileText size={18} />
+                      {pub.category === 'Message' ? <Megaphone size={18} /> : <FileText size={18} />}
                     </div>
                     <div>
                       <p className="font-medium text-sm line-clamp-1">{pub.title}</p>
                       <div className="flex items-center space-x-3 text-[10px] text-muted-foreground uppercase tracking-wider">
                         <span className="flex items-center"><Building2 size={10} className="mr-1" /> {pub.provenance || 'Officiel'}</span>
                         <span className="flex items-center"><Clock size={10} className="mr-1" /> {new Date(pub.created_at).toLocaleDateString('fr-FR')}</span>
+                        <Badge variant="outline" className="h-4 text-[8px] border-white/10 px-1">{pub.category}</Badge>
                       </div>
                     </div>
                   </div>
