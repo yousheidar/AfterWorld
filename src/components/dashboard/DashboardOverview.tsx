@@ -12,7 +12,8 @@ import {
   Building2,
   Clock,
   Megaphone,
-  Trash2
+  Trash2,
+  Vote
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import PublicationForm from "./PublicationForm";
@@ -102,26 +103,18 @@ const DashboardOverview = ({ profile, onNavigate }: DashboardOverviewProps) => {
         <p className="text-muted-foreground text-sm">État actuel de la conférence AfterWorld.</p>
       </div>
 
-      {/* 1. Indicateurs et Fortune (En haut) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2 bg-gradient-to-br from-primary/20 to-transparent border-primary/20 cursor-pointer hover:bg-primary/5 transition-all group" onClick={() => onNavigate("indices")}>
-          <CardContent className="pt-8 pb-8 flex flex-col items-center text-center relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity"><TrendingUp size={100} /></div>
-            <span className="text-xs font-medium uppercase tracking-[0.2em] text-primary mb-2">Indice de Développement Global</span>
-            <div className="text-6xl font-black tracking-tighter mb-4">{globalScore}<span className="text-2xl text-muted-foreground ml-1">%</span></div>
-            <div className="w-full max-w-md h-2 bg-white/5 rounded-full overflow-hidden mb-4">
-              <div className="h-full bg-primary transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(59,130,246,0.5)]" style={{ width: `${globalScore}%` }} />
-            </div>
-            <p className="text-xs text-muted-foreground flex items-center group-hover:text-white transition-colors">Voir le détail des indices <ChevronRight size={12} className="ml-1" /></p>
-          </CardContent>
-        </Card>
-        <Card className="bg-white/[0.02] border-white/5 cursor-pointer hover:bg-white/[0.04] transition-all flex flex-col justify-center items-center text-center p-6" onClick={() => onNavigate("bank")}>
-          <span className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground mb-4">Votre Fortune</span>
-          <div className="text-4xl font-bold text-white mb-1">{profile?.balance || 0}</div>
-          <div className="text-[10px] text-primary font-bold uppercase tracking-widest mb-4">AfterCoins</div>
-          <Badge variant="outline" className="border-primary/20 text-primary bg-primary/5">{profile?.role}</Badge>
-        </Card>
-      </div>
+      {/* 1. Indicateur Global */}
+      <Card className="bg-gradient-to-br from-primary/20 to-transparent border-primary/20 cursor-pointer hover:bg-primary/5 transition-all group" onClick={() => onNavigate("indices")}>
+        <CardContent className="pt-8 pb-8 flex flex-col items-center text-center relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity"><TrendingUp size={100} /></div>
+          <span className="text-xs font-medium uppercase tracking-[0.2em] text-primary mb-2">Indice de Développement Global</span>
+          <div className="text-6xl font-black tracking-tighter mb-4">{globalScore}<span className="text-2xl text-muted-foreground ml-1">%</span></div>
+          <div className="w-full max-w-md h-2 bg-white/5 rounded-full overflow-hidden mb-4">
+            <div className="h-full bg-primary transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(59,130,246,0.5)]" style={{ width: `${globalScore}%` }} />
+          </div>
+          <p className="text-xs text-muted-foreground flex items-center group-hover:text-white transition-colors">Voir le détail des indices <ChevronRight size={12} className="ml-1" /></p>
+        </CardContent>
+      </Card>
 
       {/* 2. Messages et Bulletin (Côte à côte) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

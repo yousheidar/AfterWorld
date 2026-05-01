@@ -13,13 +13,15 @@ import {
   Bell,
   Menu,
   Settings,
-  Wallet
+  MessageSquare,
+  Vote
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import BulletinOfficiel from "@/components/dashboard/BulletinOfficiel";
 import CivilizationIndices from "@/components/dashboard/CivilizationIndices";
-import Bank from "@/components/dashboard/Bank";
 import DashboardOverview from "@/components/dashboard/DashboardOverview";
+import PrivateMessaging from "@/components/dashboard/PrivateMessaging";
+import Politics from "@/components/dashboard/Politics";
 
 const Dashboard = () => {
   const { user, signOut, loading } = useAuth();
@@ -68,18 +70,23 @@ const Dashboard = () => {
   
   if (!user) return null;
 
+  const userRole = user.user_metadata?.role;
+  const canAccessPrivate = userRole === 'Etat-Major' || userRole === 'Présidence';
+
   const navItems = [
     { id: "overview", icon: LayoutDashboard, label: "Vue d'ensemble" },
     { id: "bulletin", icon: FileText, label: "Bulletin officiel" },
     { id: "indices", icon: BarChart3, label: "Indices de civilisation" },
-    { id: "bank", icon: Wallet, label: "Banque" },
+    { id: "politics", icon: Vote, label: "Politique" },
+    ...(canAccessPrivate ? [{ id: "messages", icon: MessageSquare, label: "Canal Sécurisé" }] : []),
   ];
 
   const renderContent = () => {
     switch (activeTab) {
       case "bulletin": return <BulletinOfficiel />;
       case "indices": return <CivilizationIndices />;
-      case "bank": return <Bank />;
+      case "politics": return <Politics />;
+      case "messages": return <PrivateMessaging />;
       case "overview":
       default:
         return <DashboardOverview profile={profile} onNavigate={setActiveTab} />;
