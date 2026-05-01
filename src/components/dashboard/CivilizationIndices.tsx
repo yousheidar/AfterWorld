@@ -3,12 +3,12 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, Trash2, TrendingUp, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { showSuccess, showError } from "@/utils/toast";
 import IndexForm from "./IndexForm";
+import EditIndexDialog from "./EditIndexDialog";
 
 const CivilizationIndices = () => {
   const { user } = useAuth();
@@ -58,15 +58,12 @@ const CivilizationIndices = () => {
 
   const isEtatMajor = userRole === 'Etat-Major';
 
-  // Calcul de la moyenne pondérée
   const calculateGlobalScore = () => {
     if (indices.length === 0) return 0;
     let totalWeightedValue = 0;
     let totalCoefficients = 0;
 
     indices.forEach(idx => {
-      // Pour la moyenne globale, on normalise les points (-100/100) en échelle 0-100 si nécessaire
-      // Mais ici on va simplement faire la moyenne pondérée des valeurs brutes
       totalWeightedValue += idx.value * idx.coefficient;
       totalCoefficients += idx.coefficient;
     });
@@ -76,7 +73,6 @@ const CivilizationIndices = () => {
 
   const globalScore = calculateGlobalScore();
 
-  // Fonction pour calculer la couleur de la jauge
   const getGaugeColor = (value: number, unit: string) => {
     const normalized = unit === 'points' ? (value + 100) / 2 : value;
     if (normalized < 30) return "bg-red-500";
@@ -94,7 +90,6 @@ const CivilizationIndices = () => {
         {isEtatMajor && <IndexForm onSuccess={fetchIndices} />}
       </div>
 
-      {/* Score Global */}
       <Card className="bg-gradient-to-br from-primary/20 to-transparent border-primary/20 overflow-hidden relative">
         <div className="absolute top-0 right-0 p-8 opacity-10">
           <TrendingUp size={120} />
@@ -130,27 +125,29 @@ const CivilizationIndices = () => {
                       <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Coef: {idx.coefficient}</p>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-4">
-                    <div className="text-right">
+                  <div className="flex items-center space-x-2">
+                    <div className="text-right mr-2">
                       <span className="text-2xl font-bold">
                         {idx.value}{idx.unit === 'percentage' ? '%' : ''}
                       </span>
                       <p className="text-[10px] text-muted-foreground uppercase">{idx.unit === 'percentage' ? 'Pourcentage' : 'Points'}</p>
                     </div>
                     {isEtatMajor && (
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="text-red-400 hover:bg-red-400/10"
-                        onClick={() => handleDelete(idx.id)}
-                      >
-                        <Trash2 size={16} />
-                      </Button>
+                      <div className="flex items-center border-l border-white/10 pl-2 space-x-1">
+                        <EditIndexDialog index={idx} onSuccess={fetchIndices} />
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-red-400 hover:bg-red-400/10"
+                          onClick={() => handleDelete(idx.id)}
+                        >
+                          <Trash2 size={16} />
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </div>
 
-                {/* Jauge */}
                 <div className="relative h-2 bg-white/5 rounded-full overflow-hidden">
                   <div 
                     className={`h-full transition-all duration-1000 ${getGaugeColor(idx.value, idx.unit)}`}
