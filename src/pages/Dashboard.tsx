@@ -23,6 +23,7 @@ const Dashboard = () => {
     if (user) {
       const fetchProfile = async () => {
         try {
+          // On tente de récupérer le profil dans la table
           const { data, error: fetchError } = await supabase
             .from('profiles')
             .select('role, full_name')
@@ -30,8 +31,8 @@ const Dashboard = () => {
             .single();
           
           if (fetchError) {
-            console.warn("Profil non trouvé, utilisation des métadonnées d'auth");
-            // Fallback sur les métadonnées de l'utilisateur si le profil n'existe pas encore
+            console.warn("Profil non trouvé en base, utilisation des métadonnées");
+            // Fallback sur les métadonnées si la table n'est pas encore prête
             setProfile({
               role: user.user_metadata?.role || 'Participant',
               full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Utilisateur'
