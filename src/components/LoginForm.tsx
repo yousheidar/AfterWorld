@@ -17,7 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { showSuccess, showError } from "@/utils/toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, LogIn } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 const formSchema = z.object({
   email: z.string().email({
@@ -64,9 +64,6 @@ const LoginForm = () => {
   return (
     <div className="w-full max-w-md p-8 space-y-6 bg-card/50 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl">
       <div className="space-y-2 text-center">
-        <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-2">
-          <LogIn className="text-primary" size={24} />
-        </div>
         <h2 className="text-2xl font-semibold tracking-tight">Connexion</h2>
         <p className="text-sm text-muted-foreground">
           Accédez à votre espace AfterWorld

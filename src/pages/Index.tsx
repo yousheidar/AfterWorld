@@ -15,7 +15,7 @@ const Index = () => {
             AfterWorld Conference
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground font-light max-w-2xl mx-auto">
-            L'avenir se dessine ici. Connectez-vous pour rejoindre l'expérience.
+            Une conférence où la fin du monde devient une opportunité de renouveau
           </p>
         </div>
 

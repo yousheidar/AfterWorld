@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, Trash2, TrendingUp, Activity } from "lucide-react";
+import { Loader2, Trash2, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { showSuccess, showError } from "@/utils/toast";
 import IndexForm from "./IndexForm";
@@ -117,9 +117,6 @@ const CivilizationIndices = () => {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center">
-                      <Activity size={20} className="text-muted-foreground" />
-                    </div>
                     <div>
                       <h3 className="font-semibold">{idx.name}</h3>
                       <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Coef: {idx.coefficient}</p>

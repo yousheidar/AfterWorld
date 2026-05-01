@@ -111,9 +111,6 @@ const Dashboard = () => {
       )}>
         <div className="flex flex-col h-full p-6">
           <div className="flex items-center space-x-3 mb-12">
-            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
-              <LayoutDashboard size={22} className="text-white" />
-            </div>
             <span className="font-bold text-xl tracking-tight">AfterWorld</span>
           </div>
 
