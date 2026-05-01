@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, Trash2, TrendingUp } from "lucide-react";
+import { Loader2, Trash2, TrendingUp, ChevronUp, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { showSuccess, showError } from "@/utils/toast";
 import IndexForm from "./IndexForm";
@@ -19,10 +19,12 @@ const CivilizationIndices = () => {
 
   const fetchIndices = async () => {
     setLoading(true);
+    // On trie par l'ordre défini, puis par nom en secours
     const { data, error } = await supabase
       .from('civilization_indices')
       .select('*')
-      .order('name');
+      .order('order_index', { ascending: true })
+      .order('name', { ascending: true });
     
     if (error) {
       showError("Erreur lors du chargement des indices");
@@ -57,6 +59,40 @@ const CivilizationIndices = () => {
     }
   };
 
+  const handleMove = async (index: number, direction: 'up' | 'down') => {
+    const newIndices = [...indices];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    
+    if (targetIndex < 0 || targetIndex >= newIndices.length) return;
+
+    // Échange local pour réactivité immédiate
+    const temp = newIndices[index];
+    newIndices[index] = newIndices[targetIndex];
+    newIndices[targetIndex] = temp;
+    setIndices(newIndices);
+
+    try {
+      // Mise à jour en base pour les deux éléments
+      const updates = newIndices.map((idx, i) => ({
+        id: idx.id,
+        name: idx.name,
+        value: idx.value,
+        unit: idx.unit,
+        coefficient: idx.coefficient,
+        order_index: i
+      }));
+
+      const { error } = await supabase
+        .from('civilization_indices')
+        .upsert(updates);
+
+      if (error) throw error;
+    } catch (err) {
+      showError("Erreur lors du changement d'ordre");
+      fetchIndices(); // Recharger en cas d'erreur
+    }
+  };
+
   const isEtatMajor = userRole === 'Etat-Major';
 
   const calculateGlobalScore = () => {
@@ -65,13 +101,10 @@ const CivilizationIndices = () => {
     let standardWeightedSum = 0;
     let standardCoefSum = 0;
     let economicModifier = 0;
-    let hasEconomic = false;
 
     indices.forEach(idx => {
       if (idx.name === "Croissance économique") {
-        // On stocke la valeur de croissance (ex: 20 pour +20%)
-        economicModifier = idx.value;
-        hasEconomic = true;
+        economicModifier += (idx.value * idx.coefficient);
       } else {
         standardWeightedSum += (idx.value * idx.coefficient);
         standardCoefSum += idx.coefficient;
@@ -79,16 +112,8 @@ const CivilizationIndices = () => {
     });
 
     const baseScore = standardCoefSum > 0 ? (standardWeightedSum / standardCoefSum) : 0;
-    
-    // Calcul proportionnel : le score de base est multiplié par (1 + croissance%)
-    // Exemple : base 50 et croissance +20% -> 50 * 1.2 = 60
-    // Exemple : base 80 et croissance -10% -> 80 * 0.9 = 72
-    let finalScore = baseScore;
-    if (hasEconomic) {
-      finalScore = baseScore * (1 + (economicModifier / 100));
-    }
-
-    return Math.max(0, Math.min(100, Math.round(finalScore)));
+    const finalScore = Math.round(baseScore + economicModifier);
+    return Math.max(0, Math.min(100, finalScore));
   };
 
   const globalScore = calculateGlobalScore();
@@ -136,7 +161,7 @@ const CivilizationIndices = () => {
         <div className="flex justify-center py-12"><Loader2 className="animate-spin text-primary" /></div>
       ) : (
         <div className="grid gap-6">
-          {indices.map((idx) => {
+          {indices.map((idx, i) => {
             const isEconomic = idx.name === "Croissance économique";
             
             return (
@@ -144,21 +169,38 @@ const CivilizationIndices = () => {
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center space-x-3">
+                      {isEtatMajor && (
+                        <div className="flex flex-col space-y-1 mr-2">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-6 w-6 text-muted-foreground hover:text-white"
+                            onClick={() => handleMove(i, 'up')}
+                            disabled={i === 0}
+                          >
+                            <ChevronUp size={14} />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-6 w-6 text-muted-foreground hover:text-white"
+                            onClick={() => handleMove(i, 'down')}
+                            disabled={i === indices.length - 1}
+                          >
+                            <ChevronDown size={14} />
+                          </Button>
+                        </div>
+                      )}
                       <div>
                         <h3 className="font-semibold">{idx.name}</h3>
                         <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
-                          {isEconomic 
-                            ? "Croissance attendue pour les 5 prochaines années" 
-                            : `Coefficient d'impact : ${idx.coefficient}`}
+                          {isEconomic ? "Modificateur de score" : `Coef: ${idx.coefficient}`}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
                       <div className="text-right mr-2">
-                        <span className={cn(
-                          "text-2xl font-bold", 
-                          isEconomic && idx.value > 0 ? "text-emerald-400" : isEconomic && idx.value < 0 ? "text-red-400" : ""
-                        )}>
+                        <span className={cn("text-2xl font-bold", isEconomic && idx.value > 0 ? "text-emerald-400" : isEconomic && idx.value < 0 ? "text-red-400" : "")}>
                           {idx.value > 0 && isEconomic ? "+" : ""}{idx.value}%
                         </span>
                         <p className="text-[10px] text-muted-foreground uppercase">Variation</p>
