@@ -28,7 +28,6 @@ const Dashboard = () => {
   const [profile, setProfile] = useState<{ role: string; full_name: string; balance: number } | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
-  const [hasAdminAccess, setHasAdminAccess] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -54,7 +53,6 @@ const Dashboard = () => {
         }
       };
       fetchProfile();
-      setHasAdminAccess(sessionStorage.getItem("admin_access") === "true");
     }
   }, [user, loading, navigate]);
 
@@ -69,8 +67,9 @@ const Dashboard = () => {
   
   if (!user) return null;
 
-  const userRole = user.user_metadata?.role;
+  const userRole = profile?.role || user.user_metadata?.role;
   const canAccessPrivate = userRole === 'Etat-Major' || userRole === 'Présidence';
+  const isEtatMajor = userRole === 'Etat-Major';
 
   const navItems = [
     { id: "overview", icon: LayoutDashboard, label: "Vue d'ensemble" },
@@ -104,8 +103,8 @@ const Dashboard = () => {
                 <item.icon size={20} /><span className="font-medium">{item.label}</span>
               </button>
             ))}
-            {hasAdminAccess && (
-              <button onClick={() => navigate("/admin/panel")} className="w-full flex items-center space-x-3 px-4 py-3 mt-8 rounded-xl border border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 transition-all duration-200">
+            {isEtatMajor && (
+              <button onClick={() => navigate("/admin")} className="w-full flex items-center space-x-3 px-4 py-3 mt-8 rounded-xl border border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 transition-all duration-200">
                 <Settings size={20} /><span className="font-medium">Panel Admin</span>
               </button>
             )}
