@@ -19,7 +19,6 @@ const CivilizationIndices = () => {
 
   const fetchIndices = async () => {
     setLoading(true);
-    // On trie par l'ordre défini, puis par nom en secours
     const { data, error } = await supabase
       .from('civilization_indices')
       .select('*')
@@ -43,7 +42,9 @@ const CivilizationIndices = () => {
           .select('role')
           .eq('id', user.id)
           .single();
-        if (data) setUserRole(data.role);
+        
+        // Fallback sur les métadonnées si le profil est manquant
+        setUserRole(data?.role || user.user_metadata?.role || 'Participant');
       };
       getRole();
     }
@@ -65,14 +66,12 @@ const CivilizationIndices = () => {
     
     if (targetIndex < 0 || targetIndex >= newIndices.length) return;
 
-    // Échange local pour réactivité immédiate
     const temp = newIndices[index];
     newIndices[index] = newIndices[targetIndex];
     newIndices[targetIndex] = temp;
     setIndices(newIndices);
 
     try {
-      // Mise à jour en base pour les deux éléments
       const updates = newIndices.map((idx, i) => ({
         id: idx.id,
         name: idx.name,
@@ -89,7 +88,7 @@ const CivilizationIndices = () => {
       if (error) throw error;
     } catch (err) {
       showError("Erreur lors du changement d'ordre");
-      fetchIndices(); // Recharger en cas d'erreur
+      fetchIndices();
     }
   };
 

@@ -70,14 +70,16 @@ const BulletinOfficiel = () => {
           .select('role')
           .eq('id', user.id)
           .single();
-        if (data) setUserRole(data.role);
+        
+        // Fallback sur les métadonnées si le profil est manquant
+        setUserRole(data?.role || user.user_metadata?.role || 'Participant');
       };
       getRole();
     }
   }, [user]);
 
   const handleDelete = async (e: React.MouseEvent, pubId: string) => {
-    e.stopPropagation(); // Empêche l'ouverture de la modal
+    e.stopPropagation();
     if (!confirm("Voulez-vous vraiment supprimer cette publication ?")) return;
 
     setIsDeleting(pubId);

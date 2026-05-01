@@ -35,7 +35,17 @@ const PublicationForm = ({ onSuccess, userRole }: PublicationFormProps) => {
           .select('full_name, committee, role')
           .eq('id', user.id)
           .single();
-        if (data) setUserProfile(data);
+        
+        if (data) {
+          setUserProfile(data);
+        } else {
+          // Fallback sur les métadonnées si le profil est absent
+          setUserProfile({
+            full_name: user.user_metadata?.full_name || "Utilisateur AfterWorld",
+            committee: user.user_metadata?.committee || "État-Major",
+            role: user.user_metadata?.role || "Participant"
+          });
+        }
       };
       fetchProfile();
     }
