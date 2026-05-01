@@ -13,8 +13,7 @@ import {
   User, 
   Building2, 
   Clock,
-  Trash2,
-  Megaphone
+  Trash2
 } from "lucide-react";
 import {
   Dialog,
@@ -37,9 +36,11 @@ const BulletinOfficiel = () => {
   const fetchPublications = async () => {
     setLoading(true);
     try {
+      // On filtre pour exclure les messages techniques du bulletin
       const { data, error } = await supabase
         .from('publications')
         .select('*')
+        .neq('category', 'Message')
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -94,7 +95,6 @@ const BulletinOfficiel = () => {
     switch (cat) {
       case 'Loi': return 'bg-red-500/10 text-red-400 border-red-500/20';
       case 'Décret': return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
-      case 'Message': return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
       default: return 'bg-purple-500/10 text-purple-400 border-purple-500/20';
     }
   };
@@ -133,7 +133,6 @@ const BulletinOfficiel = () => {
           {publications.map((pub) => {
             const { date, time } = formatDateTime(pub.created_at);
             const showDelete = canDelete(pub);
-            const isMessage = pub.category === 'Message';
             
             return (
               <Card 
@@ -145,7 +144,6 @@ const BulletinOfficiel = () => {
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex gap-2">
                       <Badge className={getCategoryStyle(pub.category)}>
-                        {isMessage && <Megaphone size={10} className="mr-1" />}
                         {pub.category}
                       </Badge>
                       {pub.provenance && (
