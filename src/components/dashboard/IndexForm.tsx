@@ -18,7 +18,7 @@ const IndexForm = ({ onSuccess }: IndexFormProps) => {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
-    value: "50",
+    value: "0",
     unit: "percentage",
     coefficient: "1"
   });
@@ -41,7 +41,7 @@ const IndexForm = ({ onSuccess }: IndexFormProps) => {
       if (error) throw error;
 
       showSuccess("Indice ajouté");
-      setFormData({ name: "", value: "50", unit: "percentage", coefficient: "1" });
+      setFormData({ name: "", value: "0", unit: "percentage", coefficient: "1" });
       setOpen(false);
       onSuccess();
     } catch (err: any) {
@@ -66,11 +66,12 @@ const IndexForm = ({ onSuccess }: IndexFormProps) => {
           <div className="space-y-2">
             <label className="text-sm font-medium">Nom de l'indice</label>
             <Input 
-              placeholder="Ex: Stabilité Sociale" 
+              placeholder="Ex: Croissance économique" 
               value={formData.name}
               onChange={(e) => setFormData({...formData, name: e.target.value})}
               required
             />
+            <p className="text-[10px] text-muted-foreground italic">Note: Nommez-le exactement "Croissance économique" pour activer le mode bonus/malus.</p>
           </div>
           
           <div className="grid grid-cols-2 gap-4">
@@ -90,8 +91,8 @@ const IndexForm = ({ onSuccess }: IndexFormProps) => {
               <label className="text-sm font-medium">Valeur initiale</label>
               <Input 
                 type="number" 
-                min={formData.unit === 'percentage' ? 0 : -100}
-                max={100}
+                min="-100"
+                max="100"
                 value={formData.value}
                 onChange={(e) => setFormData({...formData, value: e.target.value})}
                 required

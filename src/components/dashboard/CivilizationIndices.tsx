@@ -60,23 +60,37 @@ const CivilizationIndices = () => {
 
   const calculateGlobalScore = () => {
     if (indices.length === 0) return 0;
-    let totalWeightedValue = 0;
-    let totalCoefficients = 0;
+    
+    let standardWeightedSum = 0;
+    let standardCoefSum = 0;
+    let economicModifier = 0;
 
     indices.forEach(idx => {
-      totalWeightedValue += idx.value * idx.coefficient;
-      totalCoefficients += idx.coefficient;
+      if (idx.name === "Croissance économique") {
+        // Agit comme un modificateur direct pondéré par son coefficient
+        economicModifier += (idx.value * idx.coefficient);
+      } else {
+        standardWeightedSum += (idx.value * idx.coefficient);
+        standardCoefSum += idx.coefficient;
+      }
     });
 
-    return totalCoefficients > 0 ? Math.round(totalWeightedValue / totalCoefficients) : 0;
+    const baseScore = standardCoefSum > 0 ? (standardWeightedSum / standardCoefSum) : 0;
+    // Le score final est la base + le bonus/malus de croissance, bridé entre 0 et 100
+    const finalScore = Math.round(baseScore + economicModifier);
+    return Math.max(0, Math.min(100, finalScore));
   };
 
   const globalScore = calculateGlobalScore();
 
-  const getGaugeColor = (value: number, unit: string) => {
-    const normalized = unit === 'points' ? (value + 100) / 2 : value;
-    if (normalized < 30) return "bg-red-500";
-    if (normalized < 60) return "bg-yellow-500";
+  const getGaugeColor = (value: number, isEconomic: boolean) => {
+    if (isEconomic) {
+      if (value < 0) return "bg-red-500";
+      if (value === 0) return "bg-gray-500";
+      return "bg-emerald-500";
+    }
+    if (value < 30) return "bg-red-500";
+    if (value < 60) return "bg-yellow-500";
     return "bg-emerald-500";
   };
 
@@ -102,7 +116,7 @@ const CivilizationIndices = () => {
           <div className="w-full max-w-md h-3 bg-white/5 rounded-full overflow-hidden">
             <div 
               className="h-full bg-primary transition-all duration-1000 ease-out shadow-[0_0_20px_rgba(59,130,246,0.5)]"
-              style={{ width: `${Math.max(0, Math.min(100, globalScore))}%` }}
+              style={{ width: `${globalScore}%` }}
             />
           </div>
         </CardContent>
@@ -112,59 +126,80 @@ const CivilizationIndices = () => {
         <div className="flex justify-center py-12"><Loader2 className="animate-spin text-primary" /></div>
       ) : (
         <div className="grid gap-6">
-          {indices.map((idx) => (
-            <Card key={idx.id} className="bg-white/[0.02] border-white/5 hover:bg-white/[0.04] transition-all">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-3">
-                    <div>
-                      <h3 className="font-semibold">{idx.name}</h3>
-                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Coef: {idx.coefficient}</p>
+          {indices.map((idx) => {
+            const isEconomic = idx.name === "Croissance économique";
+            
+            return (
+              <Card key={idx.id} className="bg-white/[0.02] border-white/5 hover:bg-white/[0.04] transition-all">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-3">
+                      <div>
+                        <h3 className="font-semibold">{idx.name}</h3>
+                        <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                          {isEconomic ? "Modificateur de score" : `Coef: ${idx.coefficient}`}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="text-right mr-2">
+                        <span className={cn("text-2xl font-bold", isEconomic && idx.value > 0 ? "text-emerald-400" : isEconomic && idx.value < 0 ? "text-red-400" : "")}>
+                          {idx.value > 0 && isEconomic ? "+" : ""}{idx.value}%
+                        </span>
+                        <p className="text-[10px] text-muted-foreground uppercase">Variation</p>
+                      </div>
+                      {isEtatMajor && (
+                        <div className="flex items-center border-l border-white/10 pl-2 space-x-1">
+                          <EditIndexDialog index={idx} onSuccess={fetchIndices} />
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="text-red-400 hover:bg-red-400/10"
+                            onClick={() => handleDelete(idx.id)}
+                          >
+                            <Trash2 size={16} />
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="text-right mr-2">
-                      <span className="text-2xl font-bold">
-                        {idx.value}{idx.unit === 'percentage' ? '%' : ''}
-                      </span>
-                      <p className="text-[10px] text-muted-foreground uppercase">{idx.unit === 'percentage' ? 'Pourcentage' : 'Points'}</p>
-                    </div>
-                    {isEtatMajor && (
-                      <div className="flex items-center border-l border-white/10 pl-2 space-x-1">
-                        <EditIndexDialog index={idx} onSuccess={fetchIndices} />
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="text-red-400 hover:bg-red-400/10"
-                          onClick={() => handleDelete(idx.id)}
-                        >
-                          <Trash2 size={16} />
-                        </Button>
-                      </div>
+
+                  <div className="relative h-2 bg-white/5 rounded-full overflow-hidden">
+                    {isEconomic ? (
+                      <>
+                        {/* Jauge centrée pour la croissance */}
+                        <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white/20 z-10" />
+                        <div 
+                          className={cn("absolute h-full transition-all duration-1000", getGaugeColor(idx.value, true))}
+                          style={{ 
+                            left: idx.value >= 0 ? "50%" : `${50 + (idx.value / 2)}%`,
+                            width: `${Math.abs(idx.value) / 2}%`
+                          }}
+                        />
+                      </>
+                    ) : (
+                      <div 
+                        className={cn("h-full transition-all duration-1000", getGaugeColor(idx.value, false))}
+                        style={{ width: `${idx.value}%` }}
+                      />
                     )}
                   </div>
-                </div>
-
-                <div className="relative h-2 bg-white/5 rounded-full overflow-hidden">
-                  <div 
-                    className={`h-full transition-all duration-1000 ${getGaugeColor(idx.value, idx.unit)}`}
-                    style={{ 
-                      width: idx.unit === 'percentage' 
-                        ? `${idx.value}%` 
-                        : `${(idx.value + 100) / 2}%` 
-                    }}
-                  />
-                  {idx.unit === 'points' && (
-                    <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white/20" />
+                  {isEconomic && (
+                    <div className="flex justify-between mt-1 text-[8px] text-muted-foreground uppercase tracking-tighter">
+                      <span>Récession (-100%)</span>
+                      <span>Neutre (0%)</span>
+                      <span>Expansion (+100%)</span>
+                    </div>
                   )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>
   );
 };
 
+import { cn } from "@/lib/utils";
 export default CivilizationIndices;

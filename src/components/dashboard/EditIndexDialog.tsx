@@ -53,12 +53,12 @@ const EditIndexDialog = ({ index, onSuccess }: EditIndexDialogProps) => {
         <form onSubmit={handleSubmit} className="space-y-4 pt-4">
           <div className="space-y-2">
             <label className="text-sm font-medium">
-              Nouvelle valeur ({index.unit === 'percentage' ? '0 à 100 %' : '-100 à 100 pts'})
+              Nouvelle valeur (-100 à 100 %)
             </label>
             <Input 
               type="number" 
-              min={index.unit === 'percentage' ? 0 : -100}
-              max={100}
+              min="-100"
+              max="100"
               value={value}
               onChange={(e) => setValue(e.target.value)}
               required
