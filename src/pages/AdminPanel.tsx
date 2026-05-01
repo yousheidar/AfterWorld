@@ -9,7 +9,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { UserPlus, Shield, Star, User, Loader2, RefreshCw, Eye, EyeOff } from "lucide-react";
+import { 
+  UserPlus, 
+  Shield, 
+  Star, 
+  User, 
+  Loader2, 
+  RefreshCw, 
+  Eye, 
+  EyeOff, 
+  Trash2 
+} from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
 
 const AdminPanel = () => {
@@ -17,6 +27,7 @@ const AdminPanel = () => {
   const [profiles, setProfiles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showPasswords, setShowPasswords] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -68,6 +79,26 @@ const AdminPanel = () => {
       showError("Erreur : " + err.message);
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleDeleteUser = async (userId: string, fullName: string) => {
+    if (!confirm(`Êtes-vous sûr de vouloir supprimer le compte de ${fullName} ?`)) return;
+    
+    setDeletingId(userId);
+    try {
+      const { error } = await supabase.functions.invoke('delete-user', {
+        body: { userId }
+      });
+
+      if (error) throw error;
+      
+      showSuccess(`Compte de ${fullName} supprimé`);
+      fetchProfiles();
+    } catch (err: any) {
+      showError("Erreur lors de la suppression : " + err.message);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -159,7 +190,7 @@ const AdminPanel = () => {
                 <TableHead>Nom</TableHead>
                 <TableHead>Rôle</TableHead>
                 <TableHead>Mot de passe</TableHead>
-                <TableHead className="text-right">ID</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -177,7 +208,17 @@ const AdminPanel = () => {
                         {showPasswords ? (p.password_plain || "Inconnu") : "••••••••"}
                       </code>
                     </TableCell>
-                    <TableCell className="text-right text-xs text-muted-foreground font-mono">{p.id.split('-')[0]}...</TableCell>
+                    <TableCell className="text-right">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="text-red-400 hover:text-red-300 hover:bg-red-400/10"
+                        onClick={() => handleDeleteUser(p.id, p.full_name)}
+                        disabled={deletingId === p.id}
+                      >
+                        {deletingId === p.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 size={16} />}
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))
               )}
