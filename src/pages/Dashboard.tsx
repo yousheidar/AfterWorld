@@ -10,9 +10,6 @@ import {
   LayoutDashboard, 
   FileText, 
   BarChart3,
-  Calendar, 
-  MessageSquare, 
-  Settings,
   Bell,
   Menu
 } from "lucide-react";
@@ -61,9 +58,6 @@ const Dashboard = () => {
     { id: "overview", icon: LayoutDashboard, label: "Vue d'ensemble" },
     { id: "bulletin", icon: FileText, label: "Bulletin officiel" },
     { id: "indices", icon: BarChart3, label: "Indices de civilisation" },
-    { id: "programme", icon: Calendar, label: "Programme" },
-    { id: "messages", icon: MessageSquare, label: "Messagerie" },
-    { id: "settings", icon: Settings, label: "Paramètres" },
   ];
 
   const renderContent = () => {
@@ -81,12 +75,21 @@ const Dashboard = () => {
               <p className="text-muted-foreground">Bienvenue dans votre espace AfterWorld personnalisé.</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-40 rounded-2xl border border-white/5 bg-white/[0.02] animate-pulse" />
-              ))}
+              <div className="h-40 rounded-2xl border border-white/5 bg-white/[0.02] p-6 flex flex-col justify-between">
+                <div className="text-muted-foreground text-sm font-medium">Statut du compte</div>
+                <div className="text-2xl font-bold text-primary">{profile?.role || 'Participant'}</div>
+              </div>
+              <div className="h-40 rounded-2xl border border-white/5 bg-white/[0.02] p-6 flex flex-col justify-between">
+                <div className="text-muted-foreground text-sm font-medium">Dernière mise à jour</div>
+                <div className="text-2xl font-bold">Aujourd'hui</div>
+              </div>
+              <div className="h-40 rounded-2xl border border-white/5 bg-white/[0.02] p-6 flex flex-col justify-between">
+                <div className="text-muted-foreground text-sm font-medium">Notifications</div>
+                <div className="text-2xl font-bold">0</div>
+              </div>
             </div>
-            <div className="h-96 rounded-2xl border border-white/5 bg-white/[0.02] flex items-center justify-center text-muted-foreground italic">
-              Espace prêt pour vos nouveaux modules...
+            <div className="h-64 rounded-2xl border border-white/5 bg-white/[0.02] flex items-center justify-center text-muted-foreground italic">
+              Prêt pour l'affichage des données en temps réel...
             </div>
           </div>
         );
