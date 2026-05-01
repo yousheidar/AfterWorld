@@ -95,7 +95,7 @@ const CivilizationIndices = () => {
           <TrendingUp size={120} />
         </div>
         <CardContent className="pt-8 pb-8 flex flex-col items-center text-center">
-          <span className="text-sm font-medium uppercase tracking-[0.2em] text-primary mb-2">Indice de Progrès Global</span>
+          <span className="text-sm font-medium uppercase tracking-[0.2em] text-primary mb-2">Développement global de la civilisation</span>
           <div className="text-7xl font-black tracking-tighter mb-4">
             {globalScore}<span className="text-3xl text-muted-foreground ml-1">%</span>
           </div>
