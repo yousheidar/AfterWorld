@@ -22,8 +22,7 @@ import {
   Trash2,
   Building2,
   Lock,
-  AlertTriangle,
-  Mail
+  AlertTriangle
 } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
 
@@ -63,7 +62,9 @@ const AdminPanel = () => {
           .select('role')
           .eq('id', user.id)
           .single();
-        if (profile) setCurrentUserRole(profile.role);
+        
+        // Fallback sur métadonnées si profil absent
+        setCurrentUserRole(profile?.role || user.user_metadata?.role || 'Participant');
       }
       
       fetchProfiles();
@@ -77,7 +78,7 @@ const AdminPanel = () => {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*');
+        .select('id, full_name, role, committee, password_plain');
       
       if (error) {
         showError("Erreur de lecture. Seul l'État-Major peut voir tous les comptes.");
@@ -248,7 +249,6 @@ const AdminPanel = () => {
             <TableHeader>
               <TableRow className="hover:bg-transparent border-white/10">
                 <TableHead>Nom</TableHead>
-                <TableHead>Email</TableHead>
                 <TableHead>Rôle</TableHead>
                 <TableHead>Comité</TableHead>
                 <TableHead>Mot de passe</TableHead>
@@ -257,18 +257,13 @@ const AdminPanel = () => {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Chargement...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Chargement...</TableCell></TableRow>
               ) : profiles.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Aucun compte trouvé</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Aucun compte trouvé</TableCell></TableRow>
               ) : (
                 profiles.map((p) => (
                   <TableRow key={p.id} className="border-white/5 hover:bg-white/5">
                     <TableCell className="font-medium">{p.full_name}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center text-xs text-muted-foreground">
-                        <Mail size={12} className="mr-1" /> {p.email || "Non renseigné"}
-                      </div>
-                    </TableCell>
                     <TableCell>{getRoleBadge(p.role)}</TableCell>
                     <TableCell>
                       {p.committee ? (

@@ -33,17 +33,25 @@ const Dashboard = () => {
 
     if (user) {
       const fetchProfile = async () => {
-        const { data } = await supabase
+        // 1. Tenter de récupérer le profil en base
+        const { data, error } = await supabase
           .from('profiles')
           .select('role, full_name')
           .eq('id', user.id)
           .single();
         
-        if (data) setProfile(data);
+        if (data) {
+          setProfile(data);
+        } else {
+          // 2. Fallback sur les métadonnées Auth si le profil public est manquant ou bloqué par RLS
+          setProfile({
+            role: user.user_metadata?.role || 'Participant',
+            full_name: user.user_metadata?.full_name || 'Utilisateur AfterWorld'
+          });
+        }
       };
       fetchProfile();
       
-      // Vérifier si l'accès admin est actif dans cette session
       setHasAdminAccess(sessionStorage.getItem("admin_access") === "true");
     }
   }, [user, loading, navigate]);
@@ -139,7 +147,6 @@ const Dashboard = () => {
               </button>
             ))}
 
-            {/* Bouton Panel Admin conditionnel */}
             {hasAdminAccess && (
               <button
                 onClick={() => navigate("/admin/panel")}
