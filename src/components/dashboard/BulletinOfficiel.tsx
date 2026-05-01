@@ -13,16 +13,17 @@ import {
   User, 
   Building2, 
   Clock,
-  X
+  Trash2
 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import PublicationForm from "./PublicationForm";
+import { showSuccess, showError } from "@/utils/toast";
 
 const BulletinOfficiel = () => {
   const { user } = useAuth();
@@ -30,6 +31,7 @@ const BulletinOfficiel = () => {
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [selectedPub, setSelectedPub] = useState<any | null>(null);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
   const fetchPublications = async () => {
     setLoading(true);
@@ -74,7 +76,35 @@ const BulletinOfficiel = () => {
     }
   }, [user]);
 
+  const handleDelete = async (e: React.MouseEvent, pubId: string) => {
+    e.stopPropagation(); // Empêche l'ouverture de la modal
+    if (!confirm("Voulez-vous vraiment supprimer cette publication ?")) return;
+
+    setIsDeleting(pubId);
+    try {
+      const { error } = await supabase
+        .from('publications')
+        .delete()
+        .eq('id', pubId);
+
+      if (error) throw error;
+
+      showSuccess("Publication supprimée");
+      setPublications(publications.filter(p => p.id !== pubId));
+    } catch (err: any) {
+      showError("Erreur lors de la suppression : " + err.message);
+    } finally {
+      setIsDeleting(null);
+    }
+  };
+
   const canPublish = userRole === 'Etat-Major' || userRole === 'Présidence';
+  
+  const canDelete = (pub: any) => {
+    if (userRole === 'Etat-Major') return true;
+    if (userRole === 'Présidence' && pub.author_id === user?.id) return true;
+    return false;
+  };
 
   const getCategoryStyle = (cat: string) => {
     switch (cat) {
@@ -117,10 +147,12 @@ const BulletinOfficiel = () => {
         <div className="grid gap-4">
           {publications.map((pub) => {
             const { date, time } = formatDateTime(pub.created_at);
+            const showDelete = canDelete(pub);
+            
             return (
               <Card 
                 key={pub.id} 
-                className="bg-white/[0.02] border-white/5 hover:bg-white/[0.04] transition-colors cursor-pointer group"
+                className="bg-white/[0.02] border-white/5 hover:bg-white/[0.04] transition-colors cursor-pointer group relative"
                 onClick={() => setSelectedPub(pub)}
               >
                 <CardHeader className="pb-2">
@@ -135,9 +167,22 @@ const BulletinOfficiel = () => {
                         </Badge>
                       )}
                     </div>
-                    <div className="flex items-center space-x-3 text-xs text-muted-foreground">
-                      <span className="flex items-center"><Calendar size={12} className="mr-1" /> {date}</span>
-                      <span className="flex items-center"><Clock size={12} className="mr-1" /> {time}</span>
+                    <div className="flex items-center space-x-4">
+                      <div className="flex items-center space-x-3 text-xs text-muted-foreground">
+                        <span className="flex items-center"><Calendar size={12} className="mr-1" /> {date}</span>
+                        <span className="flex items-center"><Clock size={12} className="mr-1" /> {time}</span>
+                      </div>
+                      {showDelete && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-400/10 z-10"
+                          onClick={(e) => handleDelete(e, pub.id)}
+                          disabled={isDeleting === pub.id}
+                        >
+                          {isDeleting === pub.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                        </Button>
+                      )}
                     </div>
                   </div>
                   <CardTitle className="text-lg group-hover:text-primary transition-colors flex items-center justify-between">
@@ -159,7 +204,6 @@ const BulletinOfficiel = () => {
         </div>
       )}
 
-      {/* Modal de lecture complète */}
       <Dialog open={!!selectedPub} onOpenChange={(open) => !open && setSelectedPub(null)}>
         <DialogContent className="sm:max-w-[700px] bg-[#0A0A0A] border-white/10 text-white max-h-[90vh] overflow-y-auto">
           {selectedPub && (
