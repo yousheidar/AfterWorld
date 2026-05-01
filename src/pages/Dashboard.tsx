@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import BulletinOfficiel from "@/components/dashboard/BulletinOfficiel";
 import CivilizationIndices from "@/components/dashboard/CivilizationIndices";
 import Bank from "@/components/dashboard/Bank";
+import DashboardOverview from "@/components/dashboard/DashboardOverview";
 
 const Dashboard = () => {
   const { user, signOut, loading } = useAuth();
@@ -81,28 +82,7 @@ const Dashboard = () => {
       case "bank": return <Bank />;
       case "overview":
       default:
-        return (
-          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="mb-10">
-              <h1 className="text-3xl font-bold tracking-tight mb-2">Tableau de bord</h1>
-              <p className="text-muted-foreground">Bienvenue dans votre espace AfterWorld personnalisé.</p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div className="h-40 rounded-2xl border border-white/5 bg-white/[0.02] p-6 flex flex-col justify-between">
-                <div className="text-muted-foreground text-sm font-medium">Statut du compte</div>
-                <div className="text-2xl font-bold text-primary">{profile?.role || 'Participant'}</div>
-              </div>
-              <div className="h-40 rounded-2xl border border-white/5 bg-white/[0.02] p-6 flex flex-col justify-between">
-                <div className="text-muted-foreground text-sm font-medium">Solde actuel</div>
-                <div className="text-2xl font-bold">{profile?.balance || 0} AfterCoins</div>
-              </div>
-              <div className="h-40 rounded-2xl border border-white/5 bg-white/[0.02] p-6 flex flex-col justify-between">
-                <div className="text-muted-foreground text-sm font-medium">Notifications</div>
-                <div className="text-2xl font-bold">0</div>
-              </div>
-            </div>
-          </div>
-        );
+        return <DashboardOverview profile={profile} onNavigate={setActiveTab} />;
     }
   };
 
@@ -111,7 +91,7 @@ const Dashboard = () => {
       {isSidebarOpen && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden" onClick={() => setIsSidebarOpen(false)} />}
       <aside className={cn("fixed inset-y-0 left-0 z-50 w-72 bg-[#0A0A0A] border-r border-white/5 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0", isSidebarOpen ? "translate-x-0" : "-translate-x-full")}>
         <div className="flex flex-col h-full p-6">
-          <div className="flex items-center space-x-3 mb-12"><span className="font-bold text-xl tracking-tight">AfterWorld</span></div>
+          <div className="flex items-center space-x-3 mb-12"><span className="font-bold text-xl tracking-tight text-primary">AfterWorld</span></div>
           <nav className="flex-1 space-y-2">
             {navItems.map((item) => (
               <button key={item.id} onClick={() => { setActiveTab(item.id); setIsSidebarOpen(false); }} className={cn("w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 group", activeTab === item.id ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-white/5 hover:text-white")}>
