@@ -19,12 +19,14 @@ import {
   Eye, 
   EyeOff, 
   Trash2,
-  Building2
+  Building2,
+  Lock
 } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
 
 const AdminPanel = () => {
   const navigate = useNavigate();
+  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   const [profiles, setProfiles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -40,10 +42,14 @@ const AdminPanel = () => {
   });
 
   useEffect(() => {
-    if (sessionStorage.getItem("admin_access") !== "true") {
+    const auth = sessionStorage.getItem("admin_access") === "true";
+    if (!auth) {
       navigate("/admin");
+      setIsAuthorized(false);
+    } else {
+      setIsAuthorized(true);
+      fetchProfiles();
     }
-    fetchProfiles();
   }, [navigate]);
 
   const fetchProfiles = async () => {
@@ -53,7 +59,7 @@ const AdminPanel = () => {
       .select('*');
     
     if (error) {
-      showError("Erreur lors du chargement des profils");
+      showError("Erreur lors du chargement des profils. Vérifiez vos permissions.");
     } else {
       const sorted = [...(data || [])].sort((a, b) => {
         const order: Record<string, number> = { "Etat-Major": 1, "Présidence": 2, "Participant": 3 };
@@ -112,11 +118,25 @@ const AdminPanel = () => {
     }
   };
 
+  // Si l'autorisation est en cours de vérification ou refusée, on ne rend RIEN
+  if (isAuthorized === null || isAuthorized === false) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background p-4 md:p-8 space-y-8">
       <div className="max-w-6xl mx-auto space-y-8">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold tracking-tight">Gestion des Comptes</h1>
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <Lock className="text-primary h-6 w-6" />
+            </div>
+            <h1 className="text-3xl font-bold tracking-tight">Gestion des Comptes</h1>
+          </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => setShowPasswords(!showPasswords)}>
               {showPasswords ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
