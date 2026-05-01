@@ -6,11 +6,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/cell";
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
 import { 
   UserPlus, Lock, Loader2, RefreshCw, Eye, EyeOff, Trash2, ShieldCheck
 } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
+import { cn } from "@/lib/utils";
 
 const UserManagement = () => {
   const [profiles, setProfiles] = useState<any[]>([]);
@@ -174,22 +182,24 @@ const UserManagement = () => {
 
       <Card className="border-white/10 bg-white/[0.02] overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="text-[10px] uppercase tracking-wider text-muted-foreground border-b border-white/5">
-              <tr>
-                <th className="px-6 py-4 font-medium">Utilisateur</th>
-                <th className="px-6 py-4 font-medium">Rôle / Comité</th>
-                <th className="px-6 py-4 font-medium">Accès</th>
-                <th className="px-6 py-4 font-medium text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent border-white/5">
+                <TableHead className="text-[10px] uppercase tracking-wider">Utilisateur</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-wider">Rôle / Comité</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-wider">Accès</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-wider text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {loading ? (
-                <tr><td colSpan={4} className="px-6 py-10 text-center text-muted-foreground">Chargement des profils...</td></tr>
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-10 text-muted-foreground">Chargement des profils...</TableCell>
+                </TableRow>
               ) : profiles.map((p) => (
-                <tr key={p.id} className="hover:bg-white/[0.02] transition-colors">
-                  <td className="px-6 py-4 font-medium">{p.full_name}</td>
-                  <td className="px-6 py-4">
+                <TableRow key={p.id} className="hover:bg-white/[0.02] border-white/5 transition-colors">
+                  <TableCell className="font-medium">{p.full_name}</TableCell>
+                  <TableCell>
                     <div className="flex flex-col">
                       <span className={cn(
                         "text-[10px] font-bold px-2 py-0.5 rounded-full w-fit mb-1",
@@ -200,12 +210,12 @@ const UserManagement = () => {
                       </span>
                       <span className="text-xs text-muted-foreground">{p.committee || '-'}</span>
                     </div>
-                  </td>
-                  <td className="px-6 py-4">
+                  </TableCell>
+                  <TableCell>
                     <code className="bg-black/40 px-2 py-1 rounded text-[11px] font-mono">
                       {showPasswords ? (p.password_plain || "Inconnu") : "••••••••"}
                     </code>
-                  </td>
+                  </TableCell>
                   <td className="px-6 py-4 text-right">
                     <Button 
                       variant="ghost" 
@@ -217,10 +227,10 @@ const UserManagement = () => {
                       {deletingId === p.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 size={14} />}
                     </Button>
                   </td>
-                </tr>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </Card>
     </div>
