@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { 
   UserPlus, 
   Shield, 
@@ -20,7 +21,8 @@ import {
   EyeOff, 
   Trash2,
   Building2,
-  Lock
+  Lock,
+  AlertTriangle
 } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
 
@@ -32,6 +34,7 @@ const AdminPanel = () => {
   const [creating, setCreating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showPasswords, setShowPasswords] = useState(false);
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     email: "",
@@ -42,39 +45,63 @@ const AdminPanel = () => {
   });
 
   useEffect(() => {
-    const auth = sessionStorage.getItem("admin_access") === "true";
-    if (!auth) {
-      navigate("/admin");
-      setIsAuthorized(false);
-    } else {
+    const checkAuth = async () => {
+      const auth = sessionStorage.getItem("admin_access") === "true";
+      if (!auth) {
+        navigate("/admin");
+        setIsAuthorized(false);
+        return;
+      }
+
       setIsAuthorized(true);
+      
+      // Vérifier le rôle réel de l'utilisateur connecté
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+        if (profile) setCurrentUserRole(profile.role);
+      }
+      
       fetchProfiles();
-    }
+    };
+
+    checkAuth();
   }, [navigate]);
 
   const fetchProfiles = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*');
-    
-    if (error) {
-      showError("Erreur lors du chargement des profils. Vérifiez vos permissions.");
-    } else {
-      const sorted = [...(data || [])].sort((a, b) => {
-        const order: Record<string, number> = { "Etat-Major": 1, "Présidence": 2, "Participant": 3 };
-        return (order[a.role] || 4) - (order[b.role] || 4);
-      });
-      setProfiles(sorted);
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*');
+      
+      if (error) {
+        console.error("Erreur RLS ou SQL:", error);
+        showError("Erreur de lecture. Seul l'État-Major peut voir tous les comptes.");
+        setProfiles([]);
+      } else {
+        const sorted = [...(data || [])].sort((a, b) => {
+          const order: Record<string, number> = { "Etat-Major": 1, "Présidence": 2, "Participant": 3 };
+          return (order[a.role] || 4) - (order[b.role] || 4);
+        });
+        setProfiles(sorted);
+      }
+    } catch (err) {
+      showError("Une erreur est survenue lors du chargement.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreating(true);
     try {
-      const { error } = await supabase.functions.invoke('create-user', {
+      const { data, error } = await supabase.functions.invoke('create-user', {
         body: formData
       });
 
@@ -118,8 +145,7 @@ const AdminPanel = () => {
     }
   };
 
-  // Si l'autorisation est en cours de vérification ou refusée, on ne rend RIEN
-  if (isAuthorized === null || isAuthorized === false) {
+  if (isAuthorized === null) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -147,6 +173,17 @@ const AdminPanel = () => {
             </Button>
           </div>
         </div>
+
+        {currentUserRole !== 'Etat-Major' && (
+          <Alert variant="destructive" className="bg-red-500/10 border-red-500/20 text-red-400">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Accès Restreint</AlertTitle>
+            <AlertDescription>
+              Votre compte actuel ({currentUserRole || 'Inconnu'}) n'a pas les permissions "Etat-Major" dans la base de données. 
+              Vous ne verrez que votre propre profil. Connectez-vous avec un compte Etat-Major pour gérer tous les participants.
+            </AlertDescription>
+          </Alert>
+        )}
 
         <Card className="border-white/10 bg-card/30 backdrop-blur-sm">
           <CardHeader>
@@ -229,7 +266,7 @@ const AdminPanel = () => {
               {loading ? (
                 <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Chargement...</TableCell></TableRow>
               ) : profiles.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Aucun compte trouvé</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Aucun compte visible (Vérifiez vos permissions RLS)</TableCell></TableRow>
               ) : (
                 profiles.map((p) => (
                   <TableRow key={p.id} className="border-white/5 hover:bg-white/5">
