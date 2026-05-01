@@ -33,6 +33,9 @@ const formSchema = z.object({
   password: z.string().min(6, {
     message: "Le mot de passe doit contenir au moins 6 caractères.",
   }),
+  fullName: z.string().min(2, {
+    message: "Veuillez entrer votre nom complet.",
+  }),
   accountType: z.enum(["Participant", "Présidence", "Etat-Major"], {
     required_error: "Veuillez sélectionner un type de compte.",
   }),
@@ -47,22 +50,19 @@ const LoginForm = () => {
     defaultValues: {
       email: "",
       password: "",
+      fullName: "",
     },
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-      // Note: Dans un flux réel, on utiliserait signInWithPassword.
-      // Pour que le rôle soit enregistré, l'utilisateur doit d'abord être créé (signUp).
-      // Ici, on tente la connexion.
       const { data, error } = await supabase.auth.signInWithPassword({
         email: values.email,
         password: values.password,
       });
 
       if (error) {
-        // Si l'utilisateur n'existe pas, on le crée pour l'exemple (SignUp)
         if (error.message.includes("Invalid login credentials")) {
           const { error: signUpError } = await supabase.auth.signUp({
             email: values.email,
@@ -70,6 +70,7 @@ const LoginForm = () => {
             options: {
               data: {
                 role: values.accountType,
+                full_name: values.fullName,
               }
             }
           });
@@ -104,6 +105,20 @@ const LoginForm = () => {
       
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+          <FormField
+            control={form.control}
+            name="fullName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Nom complet</FormLabel>
+                <FormControl>
+                  <Input placeholder="Jean Dupont" {...field} className="bg-background/50 border-white/10 focus:border-primary/50 transition-all" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
           <FormField
             control={form.control}
             name="email"
