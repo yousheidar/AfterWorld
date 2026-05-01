@@ -60,7 +60,7 @@ const PublicationForm = ({ onSuccess, userRole }: PublicationFormProps) => {
 
       if (error) throw error;
 
-      showSuccess(formData.category === 'Message' ? "Message ML envoyé" : "Publication enregistrée");
+      showSuccess(formData.category === 'Message' ? "Message envoyé" : "Publication enregistrée");
       setFormData({ 
         title: "", 
         category: userRole === 'Etat-Major' ? "Message" : (userRole === 'Présidence' ? "Loi" : "Décision"), 
@@ -79,7 +79,7 @@ const PublicationForm = ({ onSuccess, userRole }: PublicationFormProps) => {
     ? [{ value: "Loi", label: "Loi" }]
     : userRole === 'Etat-Major'
     ? [
-        { value: "Message", label: "Message ML (Flash)" },
+        { value: "Message", label: "Message Flash" },
         { value: "Loi", label: "Loi" },
         { value: "Décision", label: "Décision" },
         { value: "Décret", label: "Décret" }
@@ -94,12 +94,12 @@ const PublicationForm = ({ onSuccess, userRole }: PublicationFormProps) => {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button className="bg-primary hover:bg-primary/90">
-          <Plus className="mr-2 h-4 w-4" /> Nouvelle Publication / ML
+          <Plus className="mr-2 h-4 w-4" /> Nouvelle Publication
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[525px] bg-card border-white/10">
         <DialogHeader>
-          <DialogTitle>Publier au Bulletin ou Envoyer un ML</DialogTitle>
+          <DialogTitle>Publier au Bulletin ou Envoyer un Message</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-4">
           <div className="space-y-2">
@@ -144,7 +144,7 @@ const PublicationForm = ({ onSuccess, userRole }: PublicationFormProps) => {
 
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-            {formData.category === 'Message' ? "Envoyer le Message ML" : "Publier officiellement"}
+            {formData.category === 'Message' ? "Envoyer le Message" : "Publier officiellement"}
           </Button>
         </form>
       </DialogContent>

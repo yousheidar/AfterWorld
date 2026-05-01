@@ -45,7 +45,7 @@ const DashboardOverview = ({ profile, onNavigate }: DashboardOverviewProps) => {
           .limit(3);
         setLatestPubs(pubsData || []);
 
-        // 3. Récupérer les 3 derniers messages de l'État-Major (ML)
+        // 3. Récupérer les 3 derniers messages de l'État-Major
         const { data: mlData } = await supabase
           .from('publications')
           .select('*')
@@ -93,10 +93,10 @@ const DashboardOverview = ({ profile, onNavigate }: DashboardOverviewProps) => {
         <p className="text-muted-foreground">État actuel de la conférence AfterWorld.</p>
       </div>
 
-      {/* Section ML (Messages État-Major) */}
+      {/* Section Messages État-Major */}
       <div className="space-y-4">
         <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-primary flex items-center">
-          <Megaphone className="mr-2 h-4 w-4" /> Messages de l'État-Major (ML)
+          <Megaphone className="mr-2 h-4 w-4" /> Messages de l'État-Major
         </h3>
         <div className="grid gap-3">
           {messagesML.length === 0 ? (
