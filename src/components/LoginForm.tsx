@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -21,11 +21,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { showSuccess } from "@/utils/toast";
+import { showSuccess, showError } from "@/utils/toast";
+import { supabase } from "@/integrations/supabase/client";
+import { Loader2 } from "lucide-react";
 
 const formSchema = z.object({
-  identifier: z.string().min(2, {
-    message: "L'identifiant est requis.",
+  email: z.string().email({
+    message: "Veuillez entrer une adresse email valide.",
   }),
   password: z.string().min(6, {
     message: "Le mot de passe doit contenir au moins 6 caractères.",
@@ -36,17 +38,35 @@ const formSchema = z.object({
 });
 
 const LoginForm = () => {
+  const [isLoading, setIsLoading] = useState(false);
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      identifier: "",
+      email: "",
       password: "",
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(values);
-    showSuccess(`Bienvenue, ${values.identifier} (${values.accountType})`);
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: values.email,
+        password: values.password,
+      });
+
+      if (error) {
+        showError("Erreur de connexion : " + error.message);
+      } else {
+        showSuccess(`Bienvenue ! Connexion réussie en tant que ${values.accountType}`);
+        // Ici on pourrait rediriger vers un dashboard
+      }
+    } catch (err) {
+      showError("Une erreur inattendue est survenue.");
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -62,12 +82,12 @@ const LoginForm = () => {
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
           <FormField
             control={form.control}
-            name="identifier"
+            name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Identifiant</FormLabel>
+                <FormLabel>Email</FormLabel>
                 <FormControl>
-                  <Input placeholder="Nom d'utilisateur" {...field} className="bg-background/50 border-white/10 focus:border-primary/50 transition-all" />
+                  <Input placeholder="votre@email.com" {...field} className="bg-background/50 border-white/10 focus:border-primary/50 transition-all" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -111,8 +131,12 @@ const LoginForm = () => {
             )}
           />
 
-          <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-white font-medium py-6 rounded-xl transition-all duration-300 shadow-lg shadow-primary/20">
-            Se connecter
+          <Button 
+            type="submit" 
+            disabled={isLoading}
+            className="w-full bg-primary hover:bg-primary/90 text-white font-medium py-6 rounded-xl transition-all duration-300 shadow-lg shadow-primary/20"
+          >
+            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Se connecter"}
           </Button>
         </form>
       </Form>
