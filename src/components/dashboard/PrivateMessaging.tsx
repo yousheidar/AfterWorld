@@ -22,8 +22,10 @@ const PrivateMessaging = () => {
   const userRole = user?.user_metadata?.role;
   const isAuthorized = userRole === 'Etat-Major' || userRole === 'Présidence';
 
-  const fetchMessages = useCallback(async () => {
+  const fetchMessages = useCallback(async (silent = false) => {
     if (!isAuthorized) return;
+    if (!silent) setLoading(true);
+    
     try {
       const { data, error } = await supabase
         .from('private_messages')
@@ -40,40 +42,44 @@ const PrivateMessaging = () => {
         .order('created_at', { ascending: true });
       
       if (error) throw error;
-      setMessages(data || []);
+      
+      // On ne met à jour l'état que si le nombre de messages a changé pour éviter les flashs
+      setMessages(prev => {
+        if (JSON.stringify(prev) === JSON.stringify(data)) return prev;
+        return data || [];
+      });
     } catch (err) {
       console.error("Erreur messagerie:", err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [isAuthorized]);
 
   useEffect(() => {
     if (!isAuthorized) return;
 
+    // 1. Chargement initial
     fetchMessages();
     
-    // Souscription robuste au canal temps réel
+    // 2. Temps réel (WebSocket)
     const channel = supabase
-      .channel('room_private_messages')
+      .channel('db-messages')
       .on(
         'postgres_changes', 
-        { 
-          event: '*', 
-          schema: 'public', 
-          table: 'private_messages' 
-        }, 
-        (payload) => {
-          console.log('Changement détecté en direct:', payload);
-          fetchMessages();
-        }
+        { event: '*', schema: 'public', table: 'private_messages' }, 
+        () => fetchMessages(true)
       )
-      .subscribe((status) => {
-        console.log('Statut de la connexion temps réel:', status);
-      });
+      .subscribe();
+
+    // 3. Sécurité : Polling (toutes les 3 secondes)
+    // Si le temps réel échoue, l'utilisateur verra quand même les messages
+    const interval = setInterval(() => {
+      fetchMessages(true);
+    }, 3000);
 
     return () => {
       supabase.removeChannel(channel);
+      clearInterval(interval);
     };
   }, [isAuthorized, fetchMessages]);
 
@@ -87,19 +93,20 @@ const PrivateMessaging = () => {
     e.preventDefault();
     if (!content.trim() || !user) return;
 
-    const messageContent = content.trim();
-    setContent(""); // On vide l'input immédiatement pour une sensation de fluidité
+    const text = content.trim();
+    setContent("");
     setSending(true);
     
     try {
       const { error } = await supabase
         .from('private_messages')
-        .insert([{ sender_id: user.id, content: messageContent }]);
+        .insert([{ sender_id: user.id, content: text }]);
 
       if (error) throw error;
+      fetchMessages(true); // Forcer la mise à jour locale
     } catch (err: any) {
       showError("Erreur d'envoi");
-      setContent(messageContent); // On remet le texte en cas d'erreur
+      setContent(text);
     } finally {
       setSending(false);
     }
@@ -112,7 +119,7 @@ const PrivateMessaging = () => {
         .delete()
         .eq('id', id);
       if (error) throw error;
-      showSuccess("Message supprimé");
+      fetchMessages(true);
     } catch (err: any) {
       showError("Action non autorisée");
     }
